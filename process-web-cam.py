@@ -41,23 +41,59 @@ while not face_confident:
         ret, frame = web_cam_capture.read()
         frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
 
-(fx, fy, fw, fh) = faces[max_index]
-face_roi = frame_gray[fy+int(fh/2):fy+fh, fx:fx+fw]
-max_mouth_size = (int(fw/2), int(fh/4))
-min_mouth_size = (int(fw/4), int(fh/8))
+ret, frame = web_cam_capture.read()
+frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+face_track_success, face_bbox = face_tracker.update(frame_gray)
 
 while not mouth_confident:
-    mouths, rejectLevels, levelWeights = mouth_classifier.detectMultiScale3(
-        frame_gray, maxSize=max_mouth_size, minSize=min_mouth_size, outputRejectLevels=True)
-    print("finding mouth " + str(len(mouths)))
-    if len(mouths) > 0:
-        max_index = np.argmax(levelWeights)
-        print(levelWeights[max_index])
-        if levelWeights[max_index] > mouth_confidence_min:
-            #(mx,my,mw,mh) = (mouths[max_index][0] + fx, mouths[max_index][1] + fy, mouths[max_index][2], mouths[max_index][3])
-            mouth_tracker.init(frame_gray, mouths[max_index])
+    if (face_track_success):
+        (fx, fy, fw, fh) = face_bbox
+        face_roi = frame_gray[fy+int(fh/2):fy+fh, fx:fx+fw]
+
+        mouths, rejectLevels, levelWeights = mouth_classifier.detectMultiScale3(
+        face_roi, outputRejectLevels=True)
+        print("finding mouth " + str(len(mouths)))
+        
+        if len(mouths) > 0:
+            max_index = np.argmax(levelWeights)
+            print(levelWeights[max_index])
+            if levelWeights[max_index] > mouth_confidence_min:
+                #(mx,my,mw,mh) = (mouths[max_index][0] + fx, mouths[max_index][1] + fy, mouths[max_index][2], mouths[max_index][3])
+                mouth_tracker.init(face_roi, mouths[max_index])
+                
+                mouth_confident = True
+            else:
+                ret, frame = web_cam_capture.read()
+                frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+                face_track_success, face_bbox = face_tracker.update(frame_gray)
+        else:
+            ret, frame = web_cam_capture.read()
+            frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+            face_track_success, face_bbox = face_tracker.update(frame_gray)
+
+    else:
+        ret, frame = web_cam_capture.read()
+        frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        face_track_success, face_bbox = face_tracker.update(frame_gray)
+
+# (fx, fy, fw, fh) = faces[max_index]
+# face_roi = frame_gray[fy+int(fh/2):fy+fh, fx:fx+fw]
+# max_mouth_size = (int(fw/2), int(fh/4))
+# min_mouth_size = (int(fw/4), int(fh/8))
+# cv.imshow("test", face_roi)
+# while not mouth_confident:
+#     mouths, rejectLevels, levelWeights = mouth_classifier.detectMultiScale3(
+#         face_roi, outputRejectLevels=True)
+#     print("finding mouth " + str(len(mouths)))
+    
+#     if len(mouths) > 0:
+#         max_index = np.argmax(levelWeights)
+#         print(levelWeights[max_index])
+#         if levelWeights[max_index] > mouth_confidence_min:
+#             #(mx,my,mw,mh) = (mouths[max_index][0] + fx, mouths[max_index][1] + fy, mouths[max_index][2], mouths[max_index][3])
+#             mouth_tracker.init(frame_gray, mouths[max_index])
             
-            mouth_confident = True
+#             mouth_confident = True
 
 #print(max_index, levelWeights)
 
@@ -92,22 +128,27 @@ while web_cam_capture.isOpened():
             #     print((mx, my, mw, mh))
             #     cv.rectangle(frame, (mx+x, my+y+int(h/2)), (mx + x + mw, my + y + mh+int(h/2)), (0, 255, 0), 2)
             #     cv.circle(frame, (mx+x,my+y+int(h/2)), radius=5, color=(0,0,255), thickness=-1)
+    else:
+        print("not face confident l")
 
     if mouth_confident:
-        mouth_track_success, mouth_bbox = mouth_tracker.update(frame_gray)
+        mouth_track_success, mouth_bbox = mouth_tracker.update(face_roi)
 
         if mouth_track_success:
             print("tracking mouth")
             mx, my, mw, mh = [int(v) for v in mouth_bbox]
             #print((mx+fx, my+fy+int(fh/2)), (mx + fx + mw, my + fy + mh+int(fh/2)))
             #cv.rectangle(frame, (mx+fx, my+fy+int(fh/2)), (mx + fx + mw, my + fy + mh+int(fh/2)), (0, 255, 0), 2)
-            cv.rectangle(frame, (mx, my), (mx + mw, my + mh), (0, 255, 0), 2)
-            cv.circle(frame, (mx+fx,my+fy+int(fh/2)), radius=5, color=(0,0,255), thickness=-1)
+            cv.rectangle(frame, (fx + mx, fy + my + int(fh/2)), (fx + mx + mw, fy + my + mh + int(fh/2)), (255, 0, 0), 2)
+            print(mx, my, mw, mh)
+            print(fx, fy, fw, fh)
+            cv.circle(frame, (fx + mx, fy + my + int(fh/2)), radius=5, color=(0,0,255), thickness=-1)
+            
             #face_roi = frame_gray[x:x+w, y+int(h/2):y+h]
             #face_roi = frame_gray[y+int(h/2):y+h, x:x+w]
 
     # check face tracking
-    if frame_counter % 30 == 0:
+    if frame_counter % 15 == 0:
         faces, rejectLevels, levelWeights = face_classifier.detectMultiScale3(frame_gray, outputRejectLevels=True)
         # if we have found a face
         if not len(faces) == 0:
@@ -117,15 +158,17 @@ while web_cam_capture.isOpened():
             # if we are confident enough with the detected face
             if levelWeights[max_index] > face_confidence_min:
                 face_confident = True
-                cv.rectangle(frame, (faces[max_index][0], faces[max_index][1]), 
-                (faces[max_index][0] + faces[max_index][2], faces[max_index][1] + faces[max_index][3]), (0, 255, 0), 2)
+
+                (fx, fy, fw, fh) = faces[max_index]
+                cv.rectangle(frame, (fx, fy), (fx + fw, fy + fh), (0, 255, 0), 2)
+                face_roi = frame_gray[fy+int(fh/2):fy+fh, fx:fx+fw]
                 
                 # if redetected face is not within tracked region
                 if not (
                     face_bbox[0]-face_pixel_tolerance < faces[max_index][0] and 
                     face_bbox[1]-face_pixel_tolerance < faces[max_index][1] and
-                    (face_bbox[0] + face_bbox[2] + face_pixel_tolerance) > (faces[max_index][0] + faces[max_index][2]) and 
-                    (face_bbox[1] + face_bbox[3] + face_pixel_tolerance) > (faces[max_index][1] + faces[max_index][3])):
+                    (face_bbox[0] + face_bbox[2] + face_pixel_tolerance) > (fx + fw) and 
+                    (face_bbox[1] + face_bbox[3] + face_pixel_tolerance) > (fy + fh)):
 
                     face_tracker.init(frame_gray, faces[max_index])
                     print("not in region")
@@ -144,7 +187,7 @@ while web_cam_capture.isOpened():
 
     # check mouth tracking
     if frame_counter % 15 == 0:
-        mouths, rejectLevels, levelWeights = mouth_classifier.detectMultiScale3(frame_gray, outputRejectLevels=True)
+        mouths, rejectLevels, levelWeights = mouth_classifier.detectMultiScale3(face_roi, outputRejectLevels=True)
         # if we have found a face
         if not len(mouths) == 0:
             # get the most confident face
@@ -153,17 +196,18 @@ while web_cam_capture.isOpened():
             # if we are confident enough with the detected face
             if levelWeights[max_index] > mouth_confidence_min:
                 mouth_confident = True
-                cv.rectangle(frame, (mouths[max_index][0], mouths[max_index][1]), 
-                (mouths[max_index][0] + mouths[max_index][2], mouths[max_index][1] + mouths[max_index][3]), (0, 255, 0), 2)
+
+                (mx, my, mw, mh) = mouths[max_index]
+                cv.rectangle(frame, (mx, my), (mx + mw, my + mh), (0, 255, 0), 2)
                 
                 # if redetected face is not within tracked region
                 if not (
-                    mouth_bbox[0]-mouth_pixel_tolerance < mouths[max_index][0] and 
-                    mouth_bbox[1]-mouth_pixel_tolerance < mouths[max_index][1] and
-                    (mouth_bbox[0] + mouth_bbox[2] + mouth_pixel_tolerance) > (mouths[max_index][0] + mouths[max_index][2]) and 
-                    (mouth_bbox[1] + mouth_bbox[3] + mouth_pixel_tolerance) > (mouths[max_index][1] + mouths[max_index][3])):
+                    mouth_bbox[0]-mouth_pixel_tolerance < mx and 
+                    mouth_bbox[1]-mouth_pixel_tolerance < my and
+                    (mouth_bbox[0] + mouth_bbox[2] + mouth_pixel_tolerance) > (mx + mw) and 
+                    (mouth_bbox[1] + mouth_bbox[3] + mouth_pixel_tolerance) > (my + mh)):
 
-                    mouth_tracker.init(frame_gray, mouths[max_index])
+                    mouth_tracker.init(face_roi, mouths[max_index])
                     print("mouth not in region")
 
                 else:
@@ -174,7 +218,7 @@ while web_cam_capture.isOpened():
                 mouth_confident = False
                 frame_counter-=1
         else:
-            print("no faces found on redetection")
+            print("no mouths found on redetection")
             face_confident = False
             frame_counter-=1
 
