@@ -25,6 +25,7 @@ while not face_classifier.confident:
         print("No faces detected on init")
 
 face_tracker.create(frame_gray, face_classifier.objects[face_classifier.max_index])
+face_tracker.set_tracking(True)
 
 while not mouth_classifier.confident:
     ret, frame = web_cam_capture.read()
@@ -44,6 +45,7 @@ while not mouth_classifier.confident:
             print("No mouths detected on init")
 
 mouth_tracker.create(face_roi, mouth_classifier.objects[mouth_classifier.max_index])
+mouth_tracker.set_tracking(True)
 
 while web_cam_capture.isOpened():
 
@@ -61,7 +63,8 @@ while web_cam_capture.isOpened():
         face_classifier.check_accuracy = True
         mouth_classifier.check_accuracy = True
     
-    if face_classifier.confident:
+    #if face_classifier.confident:
+    if face_tracker.tracking:
         face_tracker.update(frame_gray)
 
         if face_tracker.track_success:
@@ -81,8 +84,10 @@ while web_cam_capture.isOpened():
                 face_tracker.x:face_tracker.x+face_tracker.w]
     else:
         print("not face confident in loop")
+        face_classifier.check_accuracy = True
 
-    if mouth_classifier.confident:
+    #if mouth_classifier.confident:
+    if mouth_tracker.tracking:
         mouth_tracker.update(face_roi)
 
         if mouth_tracker.track_success:
@@ -99,6 +104,7 @@ while web_cam_capture.isOpened():
                 radius=5, color=(0,0,255), thickness=-1)
     else:
         print("not mouth confident in loop")
+        mouth_classifier.check_accuracy = True
 
     # check face tracking
     if face_classifier.check_accuracy:
@@ -107,9 +113,11 @@ while web_cam_capture.isOpened():
 
         if face_classifier.max_index == -1:
             print("no faces found on redetection")
+            # no faces
         elif not face_classifier.confident:
             print("face not confident")
         else:
+            face_tracker.set_tracking(True)
             cv.rectangle(
                 frame, 
                 (face_classifier.x, face_classifier.y), 
@@ -134,12 +142,13 @@ while web_cam_capture.isOpened():
         if mouth_classifier.max_index == -1:
             print("no mouths found on redetection")
         elif not mouth_classifier.confident:
-            print("mouth not confident")
+            print("mouth not confident on redetection")
         else:
+            mouth_tracker.set_tracking(True)
             cv.rectangle(
                 frame, 
                 (face_tracker.x + mouth_classifier.x, face_tracker.y + int(face_tracker.h/2) + mouth_classifier.y), 
-                (face_tracker.x + mouth_classifier.w + mouth_classifier.x, face_tracker.y + int(face_tracker.h/2) + mouth_classifier.h), 
+                (face_tracker.x + mouth_classifier.w + mouth_classifier.x, face_tracker.y + int(face_tracker.h/2)+ mouth_classifier.y + mouth_classifier.h), 
                 (0, 255, 0), 2)
             
             if mouth_classifier.check_in_region(mouth_tracker.x, mouth_tracker.y, mouth_tracker.w, mouth_tracker.h):
@@ -147,6 +156,7 @@ while web_cam_capture.isOpened():
             else:
                 mouth_tracker.create(frame_gray, mouth_classifier.objects[mouth_classifier.max_index])
                 print("re-init mouth tracker")
+
 
     cv.imshow('web cam', frame)
 

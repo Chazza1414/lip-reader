@@ -14,6 +14,7 @@ class Classifier:
         self.pixel_tolerance = pixel_tolerance
         self.confidence_min = confidence_min
         self.confident = confident
+        self.current_confidence = 0
         self.check_accuracy = check_accuracy
 
         self.x = 0
@@ -36,6 +37,11 @@ class Classifier:
     def __get_most_confident(self):
         if len(self.objects) > 0:
             self.max_index = np.argmax(self.level_weights)
+
+            # if (self.current_confidence < self.level_weights[self.max_index]):
+            #     self.current_confidence = self.level_weights[self.max_index]
+
+            #     (self.x, self.y, self.w, self.h) = self.objects[self.max_index]
             
             if self.level_weights[self.max_index] > self.confidence_min:
                 self.confident = True
@@ -46,7 +52,6 @@ class Classifier:
                 self.confident = False
                 self.check_accuracy = True
         else:
-            self.confident = False
             self.check_accuracy = True
             self.max_index = -1
         
