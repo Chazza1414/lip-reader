@@ -8,6 +8,13 @@ face_landmark_detector = dlib.shape_predictor("../predictors/shape_predictor_68_
 web_cam_capture = cv.VideoCapture(0)
 win = dlib.image_window()
 
+margin=10
+mouth_box_width = 60
+mouth_box_height = 35
+
+width_scale = 0.75
+height_scale = 0.75
+
 while web_cam_capture.isOpened():
 
     ret, frame = web_cam_capture.read()
@@ -28,11 +35,39 @@ while web_cam_capture.isOpened():
     dets = frontal_face_detector(frame)
 
     for i, d in enumerate(dets):
-        cv.rectangle(frame, (d.left(), d.top()), (d.right(), d.bottom()), (0, 255, 0), 2)
+        #cv.rectangle(frame, (d.left(), d.top()), (d.right(), d.bottom()), (0, 255, 0), 2)
 
         face = face_landmark_detector(frame, d)
-        print(face.part(0))
-        print("\n\n")
+        #print(face.parts())
+        
+        #for j, p in enumerate(face.parts()):
+            #print(type(p))
+            #print(p)
+            #cv.circle(frame, (p.x, p.y), radius=5, color=(255,0,0), thickness=-1)
+            #win.add_overlay_circle(p, radius=3, color=dlib.rgb_pixel(255,0,0))
+        # mouth_rectangle = dlib.rectangle(left=face.part(48).x - margin, 
+        #                            top=face.part(51).y - margin, 
+        #                            right=face.part(54).x + margin, 
+        #                            bottom=face.part(57).y + margin)
+
+        mouth_rectangle = dlib.rectangle(left=face.part(48).x, 
+                                   top=face.part(51).y, 
+                                   right=face.part(54).x, 
+                                   bottom=face.part(57).y)
+        #print(mouth_rectangle.center())
+
+        # draw_rectangle = dlib.rectangle(left=mouth_rectangle.center().x - int(mouth_rectangle.width() * width_scale), 
+        #                                 top=mouth_rectangle.center().y - int(mouth_rectangle.height() * height_scale), 
+        #                                 right=mouth_rectangle.center().x + int(mouth_rectangle.width() * width_scale), 
+        #                                 bottom=mouth_rectangle.center().y + int(mouth_rectangle.height() * height_scale))
+        draw_rectangle = dlib.rectangle(left=int(mouth_rectangle.left() * width_scale), 
+                                        top=int(mouth_rectangle.top() * height_scale), 
+                                        right=int(mouth_rectangle.right() * width_scale), 
+                                        bottom=int(mouth_rectangle.bottom() * height_scale))
+        #print(rectangle.height, rectangle.width)
+        win.add_overlay(draw_rectangle, dlib.rgb_pixel(255,0,0))
+
+        #print("\n\n")
 
         #cv.rectangle(frame, (face.part(0)[0], face.part(0)[1]), (face.part(1)[0], face.part(1)[1]), (255, 0, 0), 2)
-        win.add_overlay(face)
+        #win.add_overlay(face)
