@@ -6,8 +6,10 @@ from keras.layers import GRU
 from keras.layers import BatchNormalization
 from keras.layers import Input
 from keras.models import Model
-# missing CTC
+from lipreader.layers import CTC
 from keras import backend as K
+import numpy as np
+import tensorflow as tf
 
 class LipReader(object):
     def __init__(self, img_c=3, img_w=100, img_h=50, frames_n=75, absolute_max_string_len=32, output_size=28):
@@ -50,8 +52,8 @@ class LipReader(object):
 
         self.resh1 = TimeDistributed(Flatten())(self.maxp3)
 
-        self.gru_1 = Bidirectional(GRU(256, return_sequences=True, kernel_initializer='Orthogonal', name='gru1'), merge_mode='concat')(self.resh1)
-        self.gru_2 = Bidirectional(GRU(256, return_sequences=True, kernel_initializer='Orthogonal', name='gru2'), merge_mode='concat')(self.gru_1)
+        self.gru_1 = Bidirectional(GRU(256, return_sequences=True, kernel_initializer='Orthogonal', name='gru1', reset_after=False), merge_mode='concat')(self.resh1)
+        self.gru_2 = Bidirectional(GRU(256, return_sequences=True, kernel_initializer='Orthogonal', name='gru2', reset_after=False), merge_mode='concat')(self.gru_1)
 
         # transforms RNN output to character activations:
         self.dense1 = Dense(self.output_size, kernel_initializer='he_normal', name='dense1')(self.gru_2)
@@ -62,7 +64,7 @@ class LipReader(object):
         self.input_length = Input(name='input_length', shape=[1], dtype='int64')
         self.label_length = Input(name='label_length', shape=[1], dtype='int64')
 
-        #self.loss_out = CTC('ctc', [self.y_pred, self.labels, self.input_length, self.label_length])
+        self.loss_out = CTC('ctc', [self.y_pred, self.labels, self.input_length, self.label_length])
 
         self.model = Model(inputs=[self.input_data, self.labels, self.input_length, self.label_length], outputs=self.loss_out)
 
@@ -70,9 +72,13 @@ class LipReader(object):
         Model(inputs=self.input_data, outputs=self.y_pred).summary()
 
     def predict(self, input_batch):
-        return self.test_function([input_batch, 0])[0]  # the first 0 indicates test
+        learning_phase = np.zeros((1,), dtype=np.int8)
+        #print(input_batch)
+        #return self.test_function()[0]  # the first 0 indicates test
+        return K.function([tf.convert_to_tensor(input_batch), K.learning_phase()], [self.y_pred, K.learning_phase()])[0]
 
     @property
     def test_function(self):
         # captures output of softmax so we can decode the output during visualization
+        #print(self.input_data)
         return K.function([self.input_data, K.learning_phase()], [self.y_pred, K.learning_phase()])
