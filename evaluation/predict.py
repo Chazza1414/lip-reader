@@ -32,7 +32,7 @@ def predict(weight_path, lip_frames, absolute_max_string_len=32, output_size=28)
     lipreader = LipReader(img_c=img_c, img_w=img_w, img_h=img_h, frames_n=frames_n,
                     absolute_max_string_len=absolute_max_string_len, output_size=output_size)
 
-    adam = Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
+    adam = Adam(learning_rate=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
 
     lipreader.model.compile(loss={'ctc': lambda y_true, y_pred: y_pred}, optimizer=adam)
     lipreader.model.load_weights(weight_path)
@@ -46,6 +46,7 @@ def predict(weight_path, lip_frames, absolute_max_string_len=32, output_size=28)
     input_length = np.array([len(lip_frames)])
 
     y_pred         = lipreader.predict(X_data)
+    #print(y_pred)
     result         = decoder.decode(y_pred, input_length)[0]
     print("result: " + result)
     return result

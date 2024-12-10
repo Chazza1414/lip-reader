@@ -26,10 +26,14 @@ def _decode(y_pred, input_length, greedy=True, beam_width=100, top_paths=1):
             Tensor `(top_paths, )` that contains
                 the log probability of each decoded sequence.
     """
+    
     decoded = K.ctc_decode(y_pred=y_pred, input_length=input_length,
                            greedy=greedy, beam_width=beam_width, top_paths=top_paths)
-    paths = [path.eval(session=K.get_session()) for path in decoded[0]]
-    logprobs  = decoded[1].eval(session=K.get_session())
+    print(decoded)
+    #paths = [path.eval(session=K.get_session()) for path in decoded[0]]
+    paths = decoded[0][0].numpy()
+    print(paths)
+    logprobs  = decoded[1].numpy()
 
     return (paths, logprobs)
 
@@ -44,7 +48,7 @@ def decode(y_pred, input_length, greedy=True, beam_width=100, top_paths=1, **kwa
     else:
         # simply output highest probability sequence
         # paths has been sorted from the start
-        result = paths[0]
+        result = paths
     return result
 
 class Decoder(object):
@@ -62,6 +66,7 @@ class Decoder(object):
         for output in decoded:
             out = output
             for postprocessor in self.postprocessors:
+                # execute postprocessors sequentially on the result of the previous
                 out = postprocessor(out)
             preprocessed.append(out)
 

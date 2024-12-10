@@ -22,6 +22,8 @@ mouth_box_height = 35
 width_scale = 0.75
 height_scale = 0.75
 
+do_prediction = False
+
 while web_cam_capture.isOpened():
 
     ret, frame = web_cam_capture.read()
@@ -37,6 +39,10 @@ while web_cam_capture.isOpened():
         break
 
     if keyboard.is_pressed('q'):
+        break
+
+    if keyboard.is_pressed('p'):
+        do_prediction = True
         break
 
     if keyboard.is_pressed('r'):
@@ -56,7 +62,8 @@ while web_cam_capture.isOpened():
                                         top=face.part(33).y, 
                                         right=face.part(33).x + (section * 3), 
                                         bottom=face.part(33).y + (section * 3)) 
-
+        win.add_overlay(draw_rectangle, dlib.rgb_pixel(0,0,255))
+        print(face.part(51).y)
         if (recording):
             if (K.image_data_format() == 'channels_last'):
                 lips = frame[draw_rectangle.left():draw_rectangle.right(), draw_rectangle.top():draw_rectangle.bottom()]
@@ -65,10 +72,10 @@ while web_cam_capture.isOpened():
                 #print(rescaled_lips.shape)
                 record_frames = np.append(record_frames, [np.array(rescaled_lips)], axis=0)
                 #print(np.array(frame).shape)
-        win.add_overlay(draw_rectangle, dlib.rgb_pixel(0,0,255))
+        
+if (do_prediction):
+    print("beginning prediction")
 
-print("beginning prediction")
-
-predict("evaluation/models/unseen-weights178.h5", record_frames)
+    predict("evaluation/models/unseen-weights178.h5", record_frames)
 
 #print(record_frames.shape)
