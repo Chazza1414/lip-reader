@@ -75,7 +75,7 @@ class LipReader(object):
         learning_phase = np.zeros((1,), dtype=np.int8)
         #print(input_batch)
         #return self.test_function()[0]  # the first 0 indicates test
-        print(type(self.input_data))
+        #print(type(self.input_data))
         out = K.function([self.input_data], [self.y_pred])
         return out(input_batch)[0]
 

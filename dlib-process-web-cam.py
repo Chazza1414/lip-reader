@@ -63,7 +63,7 @@ while web_cam_capture.isOpened():
                                         right=face.part(33).x + (section * 3), 
                                         bottom=face.part(33).y + (section * 3)) 
         win.add_overlay(draw_rectangle, dlib.rgb_pixel(0,0,255))
-        print(face.part(51).y)
+        #print(face.part(51).y)
         if (recording):
             if (K.image_data_format() == 'channels_last'):
                 lips = frame[draw_rectangle.left():draw_rectangle.right(), draw_rectangle.top():draw_rectangle.bottom()]
