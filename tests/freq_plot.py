@@ -4,8 +4,11 @@ from scipy.io import wavfile
 from scipy.fft import fft
 from scipy.signal import spectrogram
 from scipy.ndimage import label
+from sklearn.cluster import KMeans
 
 FRAME_RATE = 25
+nfft = 128
+noverlap = nfft // 2
 
 # Read the frame-time pairs from the text file
 time_word_pairs = []
@@ -14,72 +17,35 @@ with open('swwp2s.align.txt', 'r') as file:
         start_time, end_time, word = line.strip().split(' ')
         time_word_pairs.append((int(start_time)/(FRAME_RATE*1000), word, (int(end_time)/(FRAME_RATE*1000))))
 
-#print(time_word_pairs)
+def read_audio(file_name):
+    sample_rate, audio_data = wavfile.read(file_name)
+    if len(audio_data.shape) > 1:
+        audio_data = audio_data[:, 0]
+    return sample_rate, audio_data
 
-# Step 1: Read the audio file
-sample_rate, audio_data = wavfile.read('s2_swwp2s.wav')
-print(sample_rate)
-# If stereo, take only one channel
-if len(audio_data.shape) > 1:
-    audio_data = audio_data[:, 0]
+sample_rate, audio_data = read_audio('s2_swwp2s.wav')
+high_sample_rate, high_audio_data = read_audio('swwp2s_high.wav')
 
-frequencies, times, Sxx = spectrogram(audio_data, fs=sample_rate)
-
-N = len(audio_data)
-audio_fft = fft(audio_data)
-audio_freq = np.fft.fftfreq(N, 1/sample_rate)
-positive_freq_indices = np.where(audio_freq >= 0)
-audio_fft = audio_fft[positive_freq_indices]
-audio_freq = audio_freq[positive_freq_indices]
-audio_magnitude = np.abs(audio_fft)
-
-
+frequencies, times, Sxx = spectrogram(audio_data, fs=sample_rate, nperseg=nfft, noverlap=noverlap, window='hamming')
+# high_frequencies, high_times, high_Sxx = spectrogram(high_audio_data, fs=high_sample_rate)
 
 start_sample = int(time_word_pairs[1][0] * sample_rate)
 end_sample = int(time_word_pairs[1][2] * sample_rate)
 audio_segment = audio_data[start_sample:end_sample]
-segment_frequencies, segment_times, segment_Sxx = spectrogram(audio_segment, fs=sample_rate)
+segment_frequencies, segment_times, segment_Sxx = spectrogram(audio_segment, fs=sample_rate, nperseg=nfft, noverlap=noverlap, window='hamming')
 
+high_start_sample = int(time_word_pairs[1][0] * high_sample_rate)
+high_end_sample = int(time_word_pairs[1][2] * high_sample_rate)
+high_audio_segment = high_audio_data[high_start_sample:high_end_sample]
+high_segment_frequencies, high_segment_times, high_segment_Sxx = spectrogram(
+    high_audio_segment, fs=high_sample_rate, nperseg=nfft, noverlap=noverlap)
 
-
-# Step 3: Apply a threshold to identify significant areas
-# threshold = 10  # Set an appropriate threshold in dB
-# Sxx_db = 10 * np.log10(segment_Sxx)  # Convert the spectrogram to dB scale
-# Sxx_db[Sxx_db < threshold] = 0  # Set values below threshold to 0
-# labeled, num_features = label(Sxx_db > 0)  # Label the connected components
-
-# # Step 5: Extract timestamps for each unique frequency section
-# sections = []
-# for i in range(1, num_features + 1):
-#     # Get the indices of the connected components
-#     indices = np.where(labeled == i)
-#     # Extract the corresponding time and frequency values
-#     time_range = times[indices[1]]
-#     freq_range = frequencies[indices[0]]
-    
-#     # Record the start and end times and frequency range
-#     section = {
-#         "time_start": time_range.min(),
-#         "time_end": time_range.max(),
-#         "freq_start": freq_range.min(),
-#         "freq_end": freq_range.max()
-#     }
-#     sections.append(section)
-
-# # Print the extracted sections
-# for section in sections:
-#     print(f"Time range: {section['time_start']}s to {section['time_end']}s, "
-#           f"Frequency range: {section['freq_start']}Hz to {section['freq_end']}Hz")
-
+offset = 2
 # Create a figure with two subplots
-fig, axs = plt.subplots(1, 3, figsize=(14, 6))
+fig, axs = plt.subplots(1, 5-offset, figsize=(14, 6))
 
-# Plot the frequency histogram
-# axs[0].hist(audio_freq, bins=200, weights=audio_magnitude, edgecolor='black')
-# axs[0].set_xlabel('Frequency (Hz)')
-# axs[0].set_ylabel('Magnitude')
-# axs[0].set_title('Frequency Histogram of the Audio File')
-
+# HISTOGRAM
+'''
 N = len(audio_data[start_sample:end_sample])
 audio_fft = fft(audio_data[start_sample:end_sample])
 audio_freq = np.fft.fftfreq(N, 1/sample_rate)
@@ -107,14 +73,37 @@ axs[1].set_xticklabels(word_labels)  # Set the x-tick labels to the correspondin
 #axs[1].set_xlabel('Time [s]')
 axs[1].set_ylabel('Frequency [Hz]')
 axs[1].set_title('Spectrogram of the Audio File')
+'''
 
 
-
-axs[2].pcolormesh(segment_times, segment_frequencies, 10 * np.log10(segment_Sxx), shading='auto')
+axs[2-offset].pcolormesh(segment_times, segment_frequencies, 10 * np.log10(segment_Sxx), shading='auto')
 
 #axs[1].set_xlabel('Time [s]')
-axs[2].set_ylabel('Frequency [Hz]')
-axs[2].set_title('Spectrogram of the Audio File')
+axs[2-offset].set_ylabel('Frequency [Hz]')
+axs[2-offset].set_title('Spectrogram of the Audio File')
+
+axs[3-offset].pcolormesh(high_segment_times, high_segment_frequencies, 10 * np.log10(high_segment_Sxx), shading='auto')
+
+
+
+Sxx_reshaped = np.abs(high_segment_Sxx).T  # Transpose to get time x frequency
+num_clusters = 3  # Define number of clusters
+kmeans = KMeans(n_clusters=num_clusters, random_state=0).fit(Sxx_reshaped)
+
+# Assign each time step to a cluster
+labels = kmeans.labels_
+
+# Visualize the clustered spectrogram
+for cluster in range(num_clusters):
+    cluster_times = high_segment_times[labels == cluster]
+    for time in cluster_times:
+       axs[4-offset].axvline(x=time, color=f'C{cluster}', linestyle='--', alpha=0.3)
+
+axs[4-offset].pcolormesh(high_segment_times, high_segment_frequencies, 10 * np.log10(high_segment_Sxx), shading='gouraud')
+axs[4-offset].set_ylabel('Frequency [Hz]')
+axs[4-offset].set_xlabel('Time [sec]')
+axs[4-offset].set_title('Clustered Spectrogram')
+#axs[4].set_colorbar(label='Intensity [dB]')
 
 # Show the plots
 plt.tight_layout()
