@@ -29,13 +29,13 @@ high_sample_rate, high_audio_data = read_audio('swwp2s_high.wav')
 frequencies, times, Sxx = spectrogram(audio_data, fs=sample_rate, nperseg=nfft, noverlap=noverlap, window='hamming')
 # high_frequencies, high_times, high_Sxx = spectrogram(high_audio_data, fs=high_sample_rate)
 
-start_sample = int(time_word_pairs[1][0] * sample_rate)
-end_sample = int(time_word_pairs[1][2] * sample_rate)
+start_sample = int(time_word_pairs[2][0] * sample_rate)
+end_sample = int(time_word_pairs[2][2] * sample_rate)
 audio_segment = audio_data[start_sample:end_sample]
 segment_frequencies, segment_times, segment_Sxx = spectrogram(audio_segment, fs=sample_rate, nperseg=nfft, noverlap=noverlap, window='hamming')
 
-high_start_sample = int(time_word_pairs[1][0] * high_sample_rate)
-high_end_sample = int(time_word_pairs[1][2] * high_sample_rate)
+high_start_sample = int(time_word_pairs[2][0] * high_sample_rate)
+high_end_sample = int(time_word_pairs[2][2] * high_sample_rate)
 high_audio_segment = high_audio_data[high_start_sample:high_end_sample]
 high_segment_frequencies, high_segment_times, high_segment_Sxx = spectrogram(
     high_audio_segment, fs=high_sample_rate, nperseg=nfft, noverlap=noverlap)
@@ -92,14 +92,16 @@ kmeans = KMeans(n_clusters=num_clusters, random_state=0).fit(Sxx_reshaped)
 
 # Assign each time step to a cluster
 labels = kmeans.labels_
-
+#print(labels)
+#print(kmeans.cluster_centers_)
 # Visualize the clustered spectrogram
 for cluster in range(num_clusters):
     cluster_times = high_segment_times[labels == cluster]
     for time in cluster_times:
-       axs[4-offset].axvline(x=time, color=f'C{cluster}', linestyle='--', alpha=0.3)
+        #print(time)
+        axs[4-offset].axvline(x=time, color=f'C{cluster}', linestyle='--', alpha=0.8)
 
-axs[4-offset].pcolormesh(high_segment_times, high_segment_frequencies, 10 * np.log10(high_segment_Sxx), shading='gouraud')
+axs[4-offset].pcolormesh(high_segment_times, high_segment_frequencies, 10 * np.log10(high_segment_Sxx), shading='auto')
 axs[4-offset].set_ylabel('Frequency [Hz]')
 axs[4-offset].set_xlabel('Time [sec]')
 axs[4-offset].set_title('Clustered Spectrogram')
