@@ -5,15 +5,16 @@ from scipy.io import wavfile
 from scipy.fft import fft
 from scipy.fftpack import ifft
 from scipy.signal import spectrogram, argrelextrema
-from scipy.ndimage import label
+from scipy.ndimage import label, gaussian_filter1d
 import noisereduce as nr
+from phoneme_library import PhonemeLibrary
 
 FILE_NAME = 'swwp2s_high.wav'
 FRAME_RATE = 25
 nfft = 128
 noverlap = nfft // 2
 
-hop_length = 64  # smaller hop length for more frames
+hop_length = 128  # smaller hop length for more frames
 n_fft = 2048  # keep n_fft high for better frequency resolution
 
 def compute_spectral_centroid(y, sr):
@@ -98,6 +99,8 @@ threshold = np.percentile(audio_segment, 10)
 time_length = (time_word_pairs[-1][2] - time_word_pairs[0][0])
 #print((time_word_pairs[-1][2], time_word_pairs[0][0]))
 centroids = compute_spectral_centroid(audio_segment, sr)
+
+centroids = gaussian_filter1d(centroids, 4)
 #print(float(time_word_pairs[0][2]), float(time_word_pairs[-1][0])*1000*FRAME_RATE)
 
 for i in range(len(centroids)):
@@ -125,13 +128,27 @@ for i in range(1, len(cent_diff) - 1):
           local_maxima_indices.append(i*((time_length)/len(centroids)))
           local_maxima_values.append(centroids[i])
           local_maxima_diffs.append(abs(cent_diff[i]))
-print(min(local_maxima_diffs))
+#print(local_maxima_diffs)
 #print(len(centroids))
 #print(audio_segment)
 cent_times = [i*((time_length)/len(centroids)) for i in range(0,len(centroids))]
 #cent_times = np.linspace(time_word_pairs[1][0], time_word_pairs[1][2], len(centroids))
 #print(cent_times)
 frequencies, times, Sxx = spectrogram(audio_segment, fs=sr, nperseg=nfft, noverlap=noverlap, window='hamming')
+
+average_db = np.mean(Sxx, axis=0)
+
+sxx_time_samples = Sxx.shape[1]
+print(average_db.shape)
+
+pre_sil = np.array(average_db[0:int((time_word_pairs[0][2]/time_length)*sxx_time_samples)])
+post_sil = np.array(average_db[int((time_word_pairs[-1][0]/time_length)*sxx_time_samples):])
+np.concat((pre_sil, post_sil))
+#print(pre_sil, post_sil)
+sil_avg = np.mean(np.concat((pre_sil, post_sil)))
+
+print(sil_avg)
+#print(Sxx.shape)
 
 #threshold = 0.0000001
 
@@ -182,13 +199,27 @@ max_freq = [(column.index(max(column))*section_freq_size) for column in list(zip
 cax = ax.pcolormesh(times, frequencies, log_Sxx, shading='auto')
 
 fig.colorbar(cax, ax=ax, label='Intensity [dB]')
-'''
+
 ax.set_xticks(time_labels)  # Set the positions of the x-ticks to the time values
 ax.set_xticklabels(word_labels)  # Set the x-tick labels to the corresponding words
-'''
 
-ax.set_xticks(local_maxima_indices)
-ax.set_xticklabels([round(num, 3) for num in local_maxima_indices], rotation=90)
+# for val in average_db:
+#   if (val < sil_avg):
+#     print(val)
+
+# time = cent_index/len(cents) * total_time
+# time = 
+# 
+
+for i in range(1, len(local_maxima_indices)):
+  start_index = int((i/len(local_maxima_indices))*len(average_db))
+  end_index = int((i/len(local_maxima_indices))*len(average_db))
+  print(start_index, end_index)
+  if (np.mean(average_db[start_index:end_index]) > sil_avg):
+    ax.fill([start_index, end_index, end_index, start_index], [0, 0, sr/2, sr/2], color='blue', alpha=0.5)
+#print(average_db.shape, len(cent_times), Sxx.shape, log_Sxx.shape)
+#ax.set_xticks(local_maxima_indices)
+#ax.set_xticklabels([round(num, 3) for num in local_maxima_indices], rotation=90)
 
 ax.scatter(cent_times, centroids, zorder=5, color='red')
 
@@ -214,10 +245,13 @@ ax.set_ylabel('Frequency [Hz]')
 ax.set_title('Spectrogram of the Audio File')
 
 plt.show()
-plt.close()
+# plt.close()
 
-plt.figure()
+# plt.figure()
 
-plt.hist(local_maxima_diffs, bins=20, edgecolor='black')
+# plt.hist(local_maxima_diffs, bins=20, edgecolor='black')
 
-plt.show()
+# plt.show()
+
+#phon_lib = PhonemeLibrary()
+#print(phon_lib.get_phonemes('white'))
