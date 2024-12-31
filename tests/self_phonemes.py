@@ -123,7 +123,7 @@ local_maxima_values = []
 local_maxima_diffs = []
 
 for i in range(1, len(cent_diff) - 1):
-    if (abs(cent_diff[i]) != 0):
+    if (abs(cent_diff[i]) != 0 and abs(cent_diff[i-1])):
       if abs(cent_diff[i]) > abs(cent_diff[i - 1]) and abs(cent_diff[i]) > abs(cent_diff[i + 1]):
           local_maxima_indices.append(i*((time_length)/len(centroids)))
           local_maxima_values.append(centroids[i])
@@ -136,15 +136,27 @@ cent_times = [i*((time_length)/len(centroids)) for i in range(0,len(centroids))]
 #print(cent_times)
 frequencies, times, Sxx = spectrogram(audio_segment, fs=sr, nperseg=nfft, noverlap=noverlap, window='hamming')
 
-average_db = np.mean(Sxx, axis=0)
+# Compute the STFT
+D = librosa.stft(audio_segment)
+
+# Compute the magnitude
+S, phase = librosa.magphase(D)
+
+# Convert the magnitude to decibels
+S_db = librosa.amplitude_to_db(S, ref=np.max)
+
+average_db = np.sum(S_db, axis=0)
 
 sxx_time_samples = Sxx.shape[1]
 print(average_db.shape)
 
-pre_sil = np.array(average_db[0:int((time_word_pairs[0][2]/time_length)*sxx_time_samples)])
-post_sil = np.array(average_db[int((time_word_pairs[-1][0]/time_length)*sxx_time_samples):])
-np.concat((pre_sil, post_sil))
-#print(pre_sil, post_sil)
+sil_end_index = int((time_word_pairs[0][2]/time_length)*len(average_db))
+sil_start_index = int((time_word_pairs[-1][0]/time_length)*len(average_db))
+print(sil_start_index, sil_end_index)
+pre_sil = np.array(average_db[:sil_end_index])
+post_sil = np.array(average_db[sil_start_index:])
+#np.concat((pre_sil, post_sil))
+print(pre_sil, post_sil)
 sil_avg = np.mean(np.concat((pre_sil, post_sil)))
 
 print(sil_avg)
@@ -208,18 +220,28 @@ ax.set_xticklabels(word_labels)  # Set the x-tick labels to the corresponding wo
 #     print(val)
 
 # time = cent_index/len(cents) * total_time
-# time = 
+# time -> average_db(1025)
 # 
 
+#print(time_length)
+#print(local_maxima_indices)
 for i in range(1, len(local_maxima_indices)):
-  start_index = int((i/len(local_maxima_indices))*len(average_db))
-  end_index = int((i/len(local_maxima_indices))*len(average_db))
-  print(start_index, end_index)
-  if (np.mean(average_db[start_index:end_index]) > sil_avg):
-    ax.fill([start_index, end_index, end_index, start_index], [0, 0, sr/2, sr/2], color='blue', alpha=0.5)
+  start_fraction = int(((i-1)/len(local_maxima_indices))*len(average_db))
+  end_fraction = int(((i)/len(local_maxima_indices))*len(average_db))
+  print(start_fraction, end_fraction)
+  print(np.mean(average_db[start_fraction:end_fraction]))
+  if (np.mean(average_db[start_fraction:end_fraction]) > sil_avg):
+    ax.fill([
+      local_maxima_indices[i-1], 
+      local_maxima_indices[i], 
+      local_maxima_indices[i], 
+      local_maxima_indices[i-1]], 
+      [0, 0, sr/2, sr/2], 
+      color='blue', alpha=0.5, zorder=8)
 #print(average_db.shape, len(cent_times), Sxx.shape, log_Sxx.shape)
 #ax.set_xticks(local_maxima_indices)
 #ax.set_xticklabels([round(num, 3) for num in local_maxima_indices], rotation=90)
+#print(cent_times)
 
 ax.scatter(cent_times, centroids, zorder=5, color='red')
 

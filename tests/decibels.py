@@ -18,14 +18,20 @@ S, phase = librosa.magphase(D)
 S_db = librosa.amplitude_to_db(S, ref=np.max)
 
 # Compute the average decibels for each time step
-average_db_per_time_step = np.mean(S_db, axis=0)
+average_db_per_time_step = np.sum(S_db, axis=0)
+
+
+print(average_db_per_time_step)
 
 # Create a time axis for plotting
 time = librosa.times_like(S_db, sr=sr, hop_length=512)
 
+sil_avg = 1.232231e-10
+
 # Plot the results
 plt.figure(figsize=(10, 6))
 plt.plot(time, average_db_per_time_step)
+#plt.hlines()
 plt.xlabel('Time (s)')
 plt.ylabel('Average Decibels (dB)')
 plt.title('Average Decibels per Time Step')
