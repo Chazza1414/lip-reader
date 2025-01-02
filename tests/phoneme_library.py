@@ -19,5 +19,5 @@ class PhonemeLibrary:
         with open(transcription_file_path, 'r') as file:
             for line in file:
                 start_time, end_time, word = line.strip().split(' ')
-                start_end_word.append((float(start_time)/(frame_rate*1000), (float(end_time)/(frame_rate*1000)), word,))
-        self.transcription_array = start_end_word
+                start_end_word.append((float(start_time)/(frame_rate*1000), (float(end_time)/(frame_rate*1000)), word))
+        return start_end_word

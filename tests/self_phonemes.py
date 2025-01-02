@@ -101,6 +101,8 @@ time_length = (time_word_pairs[-1][2] - time_word_pairs[0][0])
 centroids = compute_spectral_centroid(audio_segment, sr)
 
 centroids = gaussian_filter1d(centroids, 4)
+
+#print(centroids)
 #print(float(time_word_pairs[0][2]), float(time_word_pairs[-1][0])*1000*FRAME_RATE)
 
 for i in range(len(centroids)):

@@ -3,11 +3,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import spectrogram, argrelextrema
+from phoneme_library import PhonemeLibrary
 
 class VisualisePhonemes:
-    def __init__(self, audio_sample, sample_rate, frame_rate, transcription_array):
-        self.audio_sample = audio_sample
-        self.sample_rate = sample_rate
+    def __init__(self, audio_file_path, frame_rate, transcription_array):
+        self.audio_file_path = audio_file_path
         self.frame_rate = frame_rate
         self.transcription_array = transcription_array
         self.average_decibels = []
@@ -19,13 +19,32 @@ class VisualisePhonemes:
         self.extrema_times = []
         self.local_extrema = []
 
-        self.audio_length = self.transcription_array[-1][1]/1000*self.frame_rate
+        self.audio_length = self.transcription_array[-1][1]#/(1000*self.frame_rate)
+
+        self.load_audio_file()
+
+        self.create_audio_segment()
+
+        self.calculate_average_decibels()
+
+        self.calculate_silent_average_decibels()
 
         # create xtick words and labels
         self.create_xticks()
 
-        return
+        self.display_phonemes(2048, 128)
     
+    def load_audio_file(self):
+        self.audio, self.sample_rate = librosa.load(self.audio_file_path)
+    
+    def create_audio_segment(self):
+        # cuts audio section down to size indicated by transcription array
+
+        start_sample = int(self.transcription_array[0][0] * sr)
+        end_sample = int(self.transcription_array[-1][1] * sr)
+
+        self.audio = self.audio[start_sample:end_sample]
+
     def strongest_phonemes(self):
         return
     
@@ -37,16 +56,20 @@ class VisualisePhonemes:
 
         # calculate the local minima and maxima of the centroids
         self.calculate_extrema(filtered_centroids)
+
+        # calculate the inflection points on the curve of centroids
+        self.calculate_inflection_points(filtered_centroids)
         
         # create spectrogram
         frequencies, times, Sxx = self.create_spectrogram()
-        log_Sxx = 10 * np.log10(Sxx)
+
+        log_Sxx_thresholded = self.threshold_and_log_spectrogram(Sxx)
         
         # create plot
         fig, ax = plt.subplots()
 
         # display spectrogram
-        cax = ax.pcolormesh(times, frequencies, log_Sxx, shading='auto')
+        cax = ax.pcolormesh(times, frequencies, log_Sxx_thresholded, shading='auto')
         fig.colorbar(cax, ax=ax, label='Intensity [dB]')
 
         # set the xticks to be words from the transcription
@@ -56,7 +79,7 @@ class VisualisePhonemes:
         inflection_length = len(self.inflection_indexes)
         avg_db_length = len(self.average_decibels)
 
-        for i in range(1, len(self.inflection_indexes)):
+        for i in range(1, inflection_length):
             start_fraction = int(((i-1)/inflection_length)*avg_db_length)
             end_fraction = int(((i)/inflection_length)*avg_db_length)
 
@@ -67,7 +90,7 @@ class VisualisePhonemes:
                 self.inflection_indexes[i], 
                 self.inflection_indexes[i-1]], 
                 [0, 0, self.sample_rate/2, self.sample_rate/2], 
-                color='blue', alpha=0.5, zorder=8)
+                color='blue', alpha=0.4, zorder=8)
 
         #ax.scatter(cent_times, centroids, zorder=5, color='red')
 
@@ -84,7 +107,7 @@ class VisualisePhonemes:
     
     def compute_spectral_centroids(self, n_fft, hop_length):
         return librosa.feature.spectral_centroid(
-            y=self.audio_sample, 
+            y=self.audio, 
             sr=self.sample_rate, 
             n_fft=n_fft, 
             hop_length=hop_length)[0]
@@ -97,15 +120,15 @@ class VisualisePhonemes:
         for i in range(len(centroids)):
             if (float(self.transcription_array[0][1]) > i*(self.audio_length/len(centroids)) or 
                 i*(self.audio_length/len(centroids)) > float(self.transcription_array[-1][0])):
-                filtered_centroids[i] = 0
+                filtered_centroids.append(0)
             else:
-                filtered_centroids[i] = centroids[i]
+                filtered_centroids.append(centroids[i])
         return filtered_centroids
 
     def calculate_extrema(self, centroids):
         # return the index of the extrema
-        local_maxima = argrelextrema(centroids, np.greater)[0]
-        local_minima = argrelextrema(centroids, np.less)[0]
+        local_maxima = argrelextrema(np.array(centroids), np.greater)[0]
+        local_minima = argrelextrema(np.array(centroids), np.less)[0]
 
         extrema_times = np.array(
             [self.audio_length*(item/len(centroids)) for item in local_maxima] + 
@@ -124,6 +147,8 @@ class VisualisePhonemes:
         inflection_indexes = []
         inflection_values = []
 
+        #print(cent_diff)
+
         for i in range(1, len(cent_diff) - 1):
             if (cent_diff[i] != 0 and cent_diff[i-1] != 0 and cent_diff[i+1] != 0):
                 if abs(cent_diff[i]) > abs(cent_diff[i - 1]) and abs(cent_diff[i]) > abs(cent_diff[i + 1]):
@@ -136,15 +161,27 @@ class VisualisePhonemes:
     def create_spectrogram(self, nfft=128):
         noverlap = nfft // 2
         return spectrogram(
-            self.audio_sample, 
+            self.audio, 
             fs=self.sample_rate, 
             nperseg=nfft, 
             noverlap=noverlap, 
             window='hamming')
     
+    def threshold_and_log_spectrogram(self, Sxx):
+        # log Sxx
+        log_Sxx = 10 * np.log10(Sxx)
+        # calculate the 70th percentile of log(Sxx)
+        threshold = np.percentile(log_Sxx, 70)
+        # calculate the minimum value of log(Sxx)
+        min = np.min(log_Sxx)
+        # set all values below the threshold to the min value
+        log_Sxx = np.where(log_Sxx < threshold, min, log_Sxx)
+
+        return log_Sxx
+
     def calculate_average_decibels(self):
         # Compute the STFT
-        D = librosa.stft(self.audio_sample)
+        D = librosa.stft(self.audio)
 
         # Compute the magnitude
         S, _ = librosa.magphase(D)
@@ -166,3 +203,15 @@ class VisualisePhonemes:
     def create_xticks(self):
         self.time_labels = [pair[0] for pair in self.transcription_array]
         self.word_labels = [pair[2] for pair in self.transcription_array]
+
+FILE_NAME = 'swwp2s_high.wav'
+FRAME_RATE = 25
+nfft = 128
+noverlap = nfft // 2
+
+y, sr = librosa.load(FILE_NAME)
+
+PhonLib = PhonemeLibrary()
+transcription_array = PhonLib.create_transcription_array('swwp2s.align.txt', 25)
+
+VisPhon = VisualisePhonemes(FILE_NAME, 25, transcription_array)
