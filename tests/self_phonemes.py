@@ -133,6 +133,8 @@ for i in range(1, len(cent_diff) - 1):
 #print(local_maxima_diffs)
 #print(len(centroids))
 #print(audio_segment)
+#print(cent_diff)
+print(np.sum(local_maxima_indices), len(local_maxima_indices), len(cent_diff), time_length)
 cent_times = [i*((time_length)/len(centroids)) for i in range(0,len(centroids))]
 #cent_times = np.linspace(time_word_pairs[1][0], time_word_pairs[1][2], len(centroids))
 #print(cent_times)
@@ -150,15 +152,15 @@ S_db = librosa.amplitude_to_db(S, ref=np.max)
 average_db = np.sum(S_db, axis=0)
 
 sxx_time_samples = Sxx.shape[1]
-print(average_db.shape)
+#print(average_db.shape)
 
 sil_end_index = int((time_word_pairs[0][2]/time_length)*len(average_db))
 sil_start_index = int((time_word_pairs[-1][0]/time_length)*len(average_db))
-print(sil_start_index, sil_end_index)
+#print(sil_start_index, sil_end_index)
 pre_sil = np.array(average_db[:sil_end_index])
 post_sil = np.array(average_db[sil_start_index:])
 #np.concat((pre_sil, post_sil))
-print(pre_sil, post_sil)
+#print(pre_sil, post_sil)
 sil_avg = np.mean(np.concat((pre_sil, post_sil)))
 
 print(sil_avg)
@@ -230,7 +232,7 @@ ax.set_xticklabels(word_labels)  # Set the x-tick labels to the corresponding wo
 for i in range(1, len(local_maxima_indices)):
   start_fraction = int(((i-1)/len(local_maxima_indices))*len(average_db))
   end_fraction = int(((i)/len(local_maxima_indices))*len(average_db))
-  print(start_fraction, end_fraction)
+  #print(start_fraction, end_fraction)
   print(np.mean(average_db[start_fraction:end_fraction]))
   if (np.mean(average_db[start_fraction:end_fraction]) > sil_avg):
     ax.fill([

@@ -21,6 +21,8 @@ class VisualisePhonemes:
 
         self.audio_length = self.transcription_array[-1][1]#/(1000*self.frame_rate)
 
+        self.phoneme_library = PhonemeLibrary()
+
         self.load_audio_file()
 
         self.create_audio_segment()
@@ -46,6 +48,18 @@ class VisualisePhonemes:
         self.audio = self.audio[start_sample:end_sample]
 
     def strongest_phonemes(self):
+        # get the number of phonemes in a word - A
+        # get the number of identified phoneme sections in each word - B
+        # if A = B:
+        #   map each phoneme section to the phoneme ID (letter combination)
+        # if A < B:
+        #   select the A loudest phonemes
+        # if A < B:
+        #   flag section as an error
+        # 
+        # display the spectrogram with phoneme sections labelled
+
+
         return
     
     def display_phonemes(self, n_fft, hop_length):
@@ -53,7 +67,7 @@ class VisualisePhonemes:
         centroids = self.compute_spectral_centroids(n_fft, hop_length)
         smoothed_centroids = self.smooth_centroids(centroids)
         filtered_centroids = self.remove_silent_centroids(smoothed_centroids)
-
+        
         # calculate the local minima and maxima of the centroids
         self.calculate_extrema(filtered_centroids)
 
@@ -82,7 +96,7 @@ class VisualisePhonemes:
         for i in range(1, inflection_length):
             start_fraction = int(((i-1)/inflection_length)*avg_db_length)
             end_fraction = int(((i)/inflection_length)*avg_db_length)
-
+            print(np.mean(self.average_decibels[start_fraction:end_fraction]))
             if (np.mean(self.average_decibels[start_fraction:end_fraction]) > self.silent_average):
                 ax.fill([
                 self.inflection_indexes[i-1], 
@@ -100,8 +114,19 @@ class VisualisePhonemes:
 
         ax.scatter(self.extrema_times, self.local_extrema, zorder=6, color='blue')
 
+        #avg_db_indexes = [self.audio_length*(i/len(self.average_decibels)) for i in range(len(self.average_decibels))]
+
+        #ax.scatter(avg_db_indexes, self.average_decibels, color='red')
+        #print(len(self.average_decibels), len(times), len(centroids))
         ax.set_ylabel('Frequency [Hz]')
         ax.set_title('Spectrogram of the Audio File')
+
+        plt.show()
+
+    def display_average_decibels(self):
+        fig, ax = plt.subplots()
+
+        ax.scatter(np.arange(len(self.average_decibels)), self.average_decibels)
 
         plt.show()
     
@@ -143,18 +168,18 @@ class VisualisePhonemes:
     
     def calculate_inflection_points(self, centroids):
         cent_diff = np.diff(centroids)
-
+        #print(cent_diff)
         inflection_indexes = []
         inflection_values = []
 
         #print(cent_diff)
 
         for i in range(1, len(cent_diff) - 1):
-            if (cent_diff[i] != 0 and cent_diff[i-1] != 0 and cent_diff[i+1] != 0):
+            if (cent_diff[i] != 0 and cent_diff[i-1] != 0):# and cent_diff[i+1] != 0):
                 if abs(cent_diff[i]) > abs(cent_diff[i - 1]) and abs(cent_diff[i]) > abs(cent_diff[i + 1]):
                     inflection_indexes.append(self.audio_length*(i/len(cent_diff)))
                     inflection_values.append(centroids[i])
-        
+        print(np.sum(inflection_indexes), len(inflection_indexes), len(cent_diff), self.audio_length, cent_diff.shape)
         self.inflection_indexes = inflection_indexes
         self.inflection_values = inflection_values
     
@@ -189,6 +214,8 @@ class VisualisePhonemes:
         # Convert the magnitude to decibels
         S_db = librosa.amplitude_to_db(S, ref=np.max)
 
+        #print(S_db.shape)
+
         self.average_decibels = np.sum(S_db, axis=0)
     
     def calculate_silent_average_decibels(self):
@@ -215,3 +242,5 @@ PhonLib = PhonemeLibrary()
 transcription_array = PhonLib.create_transcription_array('swwp2s.align.txt', 25)
 
 VisPhon = VisualisePhonemes(FILE_NAME, 25, transcription_array)
+
+#VisPhon.display_average_decibels()
