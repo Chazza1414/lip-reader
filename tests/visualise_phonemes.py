@@ -11,6 +11,7 @@ class VisualisePhonemes:
         self.frame_rate = frame_rate
         self.transcription_array = transcription_array
         self.average_decibels = []
+        self.total_decibels = []
         self.silent_average = 0
         self.time_labels = []
         self.word_labels = []
@@ -18,6 +19,8 @@ class VisualisePhonemes:
         self.inflection_values = []
         self.extrema_times = []
         self.local_extrema = []
+        # [start_time, end_time, phoneme, index]
+        self.phoneme_regions = []
 
         self.audio_length = self.transcription_array[-1][1]#/(1000*self.frame_rate)
 
@@ -27,7 +30,7 @@ class VisualisePhonemes:
 
         self.create_audio_segment()
 
-        self.calculate_average_decibels()
+        self.calculate_average_decibels(2048, 128)
 
         self.calculate_silent_average_decibels()
 
@@ -35,6 +38,8 @@ class VisualisePhonemes:
         self.create_xticks()
 
         self.display_phonemes(2048, 128)
+
+        
     
     def load_audio_file(self):
         self.audio, self.sample_rate = librosa.load(self.audio_file_path)
@@ -47,20 +52,102 @@ class VisualisePhonemes:
 
         self.audio = self.audio[start_sample:end_sample]
 
-    def strongest_phonemes(self):
+    def assign_phonemes(self):
         # get the number of phonemes in a word - A
         # get the number of identified phoneme sections in each word - B
         # if A = B:
         #   map each phoneme section to the phoneme ID (letter combination)
         # if A < B:
         #   select the A loudest phonemes
-        # if A < B:
+        # if A > B:
         #   flag section as an error
+        #   reidentify sections that are below silent threshold
         # 
         # display the spectrogram with phoneme sections labelled
 
+        # create phoneme region array
 
+        #self.phoneme_regions = self.inflection_indexes
+
+        self.phoneme_regions = [
+            [self.inflection_indexes[i], self.inflection_indexes[i+1], '', i]
+            for i in range(len(self.inflection_indexes) - 1)]
+
+        # array for timestamping phonemes in a word
+        phoneme_region_labels = []
+        print(self.phoneme_regions)
+        # iterate through each item in the transcription array that is a word
+        for i in range(len(self.transcription_array)):
+            if (transcription_array[i][2] == 'sil'):
+                continue
+            word_phonemes = self.phoneme_library.get_phonemes(self.transcription_array[i][2])
+            print(word_phonemes)
+
+            word_phoneme_regions = []
+
+            for j in range(len(self.phoneme_regions)):
+                if (# if start time is within the phoneme region
+                    ((self.transcription_array[i][0] <= self.phoneme_regions[j][0]) and 
+                    (self.transcription_array[i][1] > self.phoneme_regions[j][0])) or
+                    # if end time is within the phoneme region
+                    ((self.transcription_array[i][0] < self.phoneme_regions[j][1]) and 
+                    (self.transcription_array[i][1] > self.phoneme_regions[j][1]))):
+                        word_phoneme_regions.append(self.phoneme_regions[j])
+
+            # word_phoneme_regions = [
+            #     region for region in self.phoneme_regions
+            #     if (self.transcription_array[i][0] <= region[0] < self.transcription_array[i][1])
+            #     or (self.transcription_array[i][0] < region[1] < self.transcription_array[i][1])]
+            print(word_phoneme_regions)
+
+            available_phoneme_regions = [
+                region for region in word_phoneme_regions
+                if region[2] == '']
+            print(available_phoneme_regions)
+
+            # same number
+            # if (len(word_phonemes) == len(word_phoneme_regions)):
+            #     print("1")
+            #     for j in range(len(word_phoneme_regions)):
+            #         self.phoneme_regions[word_phoneme_regions[j][3]][2] = word_phonemes[j]
+            # the number of unoccupied regions is the same as the number of phonemes
+            if (len(word_phonemes) == len(available_phoneme_regions)):
+                print("1")
+                for j in range(len(available_phoneme_regions)):
+                    self.phoneme_regions[available_phoneme_regions[j][3]][2] = word_phonemes[j]
+            # more regions than phonemes
+            elif (len(word_phonemes) < len(available_phoneme_regions)):
+                print("2")
+                assigned_indexes = self.calculate_strongest_phonemes(len(word_phonemes), available_phoneme_regions)
+                for j in range(len(assigned_indexes)):
+                    self.phoneme_regions[assigned_indexes[j]][2] = word_phonemes[j]
+            else:
+                print("ERROR")
+        print(self.phoneme_regions)
         return
+    
+    def calculate_strongest_phonemes(self, n, available_phoneme_regions):
+        # sort phoneme regions by loudest and take the top n
+
+        decibels = []
+
+        total_db_length = len(self.total_decibels)
+
+        for i in range(0, len(available_phoneme_regions)):
+            start_fraction = int((available_phoneme_regions[i][0]/self.audio_length)*total_db_length)
+            end_fraction = int((available_phoneme_regions[i][1]/self.audio_length)*total_db_length)
+            print(start_fraction, end_fraction)
+            decibels.append([
+                np.sum(self.total_decibels[start_fraction:end_fraction]), 
+                int(available_phoneme_regions[i][3])])
+        #print(decibels)
+        sorted_decibels = sorted(decibels, key=lambda x: x[0], reverse=True)[:n]
+        sorted_decibels = [item[1] for item in sorted_decibels]
+        sorted_decibels = sorted(sorted_decibels)
+        #print(decibels)
+        #print(decibels[:n])
+        print(sorted_decibels)
+        return sorted_decibels
     
     def display_phonemes(self, n_fft, hop_length):
         # create centroids
@@ -78,7 +165,10 @@ class VisualisePhonemes:
         frequencies, times, Sxx = self.create_spectrogram()
 
         log_Sxx_thresholded = self.threshold_and_log_spectrogram(Sxx)
-        
+
+        self.assign_phonemes()
+        self.time_labels = [pair[0] for pair in self.phoneme_regions]
+        self.word_labels = [pair[2] for pair in self.phoneme_regions]
         # create plot
         fig, ax = plt.subplots()
 
@@ -96,7 +186,7 @@ class VisualisePhonemes:
         for i in range(1, inflection_length):
             start_fraction = int(((i-1)/inflection_length)*avg_db_length)
             end_fraction = int(((i)/inflection_length)*avg_db_length)
-            print(np.mean(self.average_decibels[start_fraction:end_fraction]))
+            #print(np.mean(self.average_decibels[start_fraction:end_fraction]), self.silent_average)
             if (np.mean(self.average_decibels[start_fraction:end_fraction]) > self.silent_average):
                 ax.fill([
                 self.inflection_indexes[i-1], 
@@ -179,7 +269,7 @@ class VisualisePhonemes:
                 if abs(cent_diff[i]) > abs(cent_diff[i - 1]) and abs(cent_diff[i]) > abs(cent_diff[i + 1]):
                     inflection_indexes.append(self.audio_length*(i/len(cent_diff)))
                     inflection_values.append(centroids[i])
-        print(np.sum(inflection_indexes), len(inflection_indexes), len(cent_diff), self.audio_length, cent_diff.shape)
+        #print(np.sum(inflection_indexes), len(inflection_indexes), len(cent_diff), self.audio_length, cent_diff.shape)
         self.inflection_indexes = inflection_indexes
         self.inflection_values = inflection_values
     
@@ -204,9 +294,9 @@ class VisualisePhonemes:
 
         return log_Sxx
 
-    def calculate_average_decibels(self):
+    def calculate_average_decibels(self, n_fft, hop_length):
         # Compute the STFT
-        D = librosa.stft(self.audio)
+        D = librosa.stft(self.audio, n_fft=n_fft, hop_length=hop_length)
 
         # Compute the magnitude
         S, _ = librosa.magphase(D)
@@ -214,9 +304,9 @@ class VisualisePhonemes:
         # Convert the magnitude to decibels
         S_db = librosa.amplitude_to_db(S, ref=np.max)
 
-        #print(S_db.shape)
-
-        self.average_decibels = np.sum(S_db, axis=0)
+        print(S_db.shape)
+        self.total_decibels = np.sum(S_db, axis=0)
+        self.average_decibels = np.mean(S_db, axis=0)
     
     def calculate_silent_average_decibels(self):
         sil_end_index = int((self.transcription_array[0][1]/self.audio_length)*len(self.average_decibels))
