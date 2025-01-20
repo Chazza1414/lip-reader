@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from phoneme_library import PhonemeLibrary
 
 VIDEO_PATH = 'id2_6000_swwp2s.mpg'
-VIDEO_PATH = "H:/UNI/CS/Year3/Project/Dataset/GRID/s23.mpg_6000.part1/s23/video/mpg_6000/bbad1s.mpg"
+VIDEO_PATH = "../GRID/s23.mpg_6000.part1/s23/video/mpg_6000/bbad1s.mpg"
 
 cap = cv.VideoCapture(VIDEO_PATH)
 
@@ -48,6 +48,32 @@ feature_mask = np.zeros_like(old_gray, dtype=np.uint8)
 feature_mask[face.part(33).y:face.part(33).y + (section * 3), face.part(33).x - (section * 3):face.part(33).x + (section * 3)] = 255
 
 p0 = cv.goodFeaturesToTrack(old_gray, mask = feature_mask, **feature_params)
+print(p0)
+#print(face.part(33))
+p0 = np.array([
+    [[float(face.part(33).x), float(face.part(33).y)]],
+    [[float(face.part(48).x), float(face.part(48).y)]],
+    [[float(face.part(49).x), float(face.part(49).y)]],
+    [[float(face.part(50).x), float(face.part(50).y)]],
+    [[float(face.part(51).x), float(face.part(51).y)]],
+    [[float(face.part(52).x), float(face.part(52).y)]],
+    [[float(face.part(53).x), float(face.part(53).y)]],
+    [[float(face.part(54).x), float(face.part(54).y)]],
+    [[float(face.part(55).x), float(face.part(55).y)]],
+    [[float(face.part(56).x), float(face.part(56).y)]],
+    [[float(face.part(57).x), float(face.part(57).y)]],
+    [[float(face.part(58).x), float(face.part(58).y)]],
+    [[float(face.part(59).x), float(face.part(59).y)]],
+    # [[float(face.part(60).x), float(face.part(60).y)]],
+    # [[float(face.part(61).x), float(face.part(61).y)]],
+    # [[float(face.part(62).x), float(face.part(62).y)]],
+    # [[float(face.part(63).x), float(face.part(63).y)]],
+    # [[float(face.part(64).x), float(face.part(64).y)]],
+    # [[float(face.part(65).x), float(face.part(65).y)]],
+    # [[float(face.part(66).x), float(face.part(66).y)]],
+    # [[float(face.part(67).x), float(face.part(67).y)]]
+], dtype=np.float32)
+print(p0)
 
 motion = [0]
 
@@ -69,13 +95,17 @@ while(1):
         good_old = p0[st==1]
 
     frame_motion = 0
+    nose_motion = []
     # draw the tracks
     for i, (new, old) in enumerate(zip(good_new, good_old)):
         a, b = new.ravel()
         c, d = old.ravel()
-        mask = cv.line(mask, (int(a), int(b)), (int(c), int(d)), color[i].tolist(), 2)
-        frame = cv.circle(frame, (int(a), int(b)), 5, color[i].tolist(), -1)
-        frame_motion += np.sqrt(np.square(a - c) + np.square(b - d))
+        if (i == 0):
+            nose_motion = [a - c, b - d]
+        else:
+            mask = cv.line(mask, (int(a), int(b)), (int(c), int(d)), color[i].tolist(), 2)
+            frame = cv.circle(frame, (int(a), int(b)), 5, color[i].tolist(), -1)
+            frame_motion += np.sqrt(np.square(a - c - nose_motion[0]) + np.square(b - d - nose_motion[1]))
     
     motion.append(motion[-1] + frame_motion)
     img = cv.add(frame, mask)
@@ -90,7 +120,7 @@ cv.destroyAllWindows()
 
 fig, ax = plt.subplots()
 
-TRANS_FILE_NAME = 'H:/UNI/CS/Year3/Project/Dataset/GRID/s23/align/bbad1s.align'
+TRANS_FILE_NAME = '../GRID/s23/align/bbad1s.align'
 PhonLib = PhonemeLibrary()
 transcription_array = PhonLib.create_transcription_array(TRANS_FILE_NAME, 25)
 

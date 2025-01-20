@@ -438,9 +438,9 @@ class VisualisePhonemes:
         self.word_labels = [pair[2] for pair in self.transcription_array]
 
 #FILE_NAME = 'swwp2s_high.wav'
-FILE_NAME = 'C:/Users/charl/OneDrive/ASUS/Documents/CS3/Project/dataset/s23_50kHz/s23/bbad1s.wav'
+FILE_NAME = '../GRID/s23_50kHz/s23/bbad1s.wav'
 #TRANS_FILE_NAME = 'swwp2s.align.txt'
-TRANS_FILE_NAME = 'C:/Users/charl/OneDrive/ASUS/Documents/CS3/Project/dataset/s23/align/bbad1s.align'
+TRANS_FILE_NAME = '../GRID/s23/align/bbad1s.align'
 FRAME_RATE = 25
 nfft = 128
 noverlap = nfft // 2
