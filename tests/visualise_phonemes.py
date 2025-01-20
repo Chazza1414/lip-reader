@@ -273,7 +273,8 @@ class VisualisePhonemes:
         # create spectrogram
         frequencies, times, Sxx = self.create_spectrogram()
 
-        log_Sxx_thresholded = self.threshold_and_log_spectrogram(Sxx)
+        log_Sxx_thresholded = 10 * np.log10(Sxx)
+        #log_Sxx_thresholded = self.threshold_and_log_spectrogram(Sxx)
 
         self.assign_phonemes()
         self.time_labels = [pair[0] for pair in self.phoneme_regions]
@@ -321,7 +322,8 @@ class VisualisePhonemes:
         #ax.scatter(avg_db_indexes, self.average_decibels, color='red')
         #print(len(self.average_decibels), len(times), len(centroids))
         ax.set_ylabel('Frequency [Hz]')
-        ax.set_title('Spectrogram of the Audio File')
+        #ax.set_title('Spectrogram of the Audio File')
+        ax.set_title(str(" ".join([word[2] for word in self.transcription_array])))
 
         plt.show()
 
@@ -382,6 +384,11 @@ class VisualisePhonemes:
                     inflection_indexes.append(self.audio_length*(i/len(cent_diff)))
                     inflection_values.append(centroids[i])
         #print(np.sum(inflection_indexes), len(inflection_indexes), len(cent_diff), self.audio_length, cent_diff.shape)
+
+        if (self.transcription_array[1][0] < inflection_indexes[0]):
+            inflection_indexes.insert(0, self.transcription_array[1][0])
+            inflection_values.insert(0, 0)
+
         self.inflection_indexes = inflection_indexes
         self.inflection_values = inflection_values
     
