@@ -43,6 +43,7 @@ class VisualisePhonemes:
     
     def load_audio_file(self):
         self.audio, self.sample_rate = librosa.load(self.audio_file_path)
+        #self.audio = gaussian_filter1d(self.audio, sigma=4)
     
     def create_audio_segment(self):
         # cuts audio section down to size indicated by transcription array
