@@ -4,6 +4,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import spectrogram, argrelextrema
 from phoneme_library import PhonemeLibrary
+import json
 
 class VisualisePhonemes:
     def __init__(self, audio_file_path, frame_rate, transcription_array):
@@ -37,7 +38,7 @@ class VisualisePhonemes:
         # create xtick words and labels
         self.create_xticks()
 
-        self.display_phonemes(2048, 128)
+        self.display_inflection_phonemes(2048, 128)
 
         
     
@@ -229,6 +230,9 @@ class VisualisePhonemes:
         print(self.phoneme_regions)
         return
 
+    def assign_timit_phonemes(self):
+        with open("timit_phonemes.json", "r") as file:
+            timit_dict = json.load(file)
 
     def add_index_to_array(self, array):
         for i, sub_array in enumerate(array):
@@ -259,7 +263,7 @@ class VisualisePhonemes:
         print(sorted_decibels)
         return sorted_decibels
     
-    def display_phonemes(self, n_fft, hop_length):
+    def display_inflection_phonemes(self, n_fft, hop_length):
         # create centroids
         centroids = self.compute_spectral_centroids(n_fft, hop_length)
         smoothed_centroids = self.smooth_centroids(centroids)
@@ -278,6 +282,64 @@ class VisualisePhonemes:
         #log_Sxx_thresholded = self.threshold_and_log_spectrogram(Sxx)
 
         self.assign_phonemes()
+        self.time_labels = [pair[0] for pair in self.phoneme_regions]
+        self.word_labels = [pair[2] for pair in self.phoneme_regions]
+        # create plot
+        fig, ax = plt.subplots()
+
+        # display spectrogram
+        cax = ax.pcolormesh(times, frequencies, log_Sxx_thresholded, shading='auto')
+        fig.colorbar(cax, ax=ax, label='Intensity [dB]')
+
+        # set the xticks to be words from the transcription
+        ax.set_xticks(self.time_labels)
+        ax.set_xticklabels(self.word_labels)
+
+        inflection_length = len(self.inflection_indexes)
+        avg_db_length = len(self.average_decibels)
+
+        for i in range(1, inflection_length):
+            start_fraction = int(((i-1)/inflection_length)*avg_db_length)
+            end_fraction = int(((i)/inflection_length)*avg_db_length)
+            #print(np.mean(self.average_decibels[start_fraction:end_fraction]), self.silent_average)
+            if (np.mean(self.average_decibels[start_fraction:end_fraction]) > self.silent_average):
+                ax.fill([
+                self.inflection_indexes[i-1], 
+                self.inflection_indexes[i], 
+                self.inflection_indexes[i], 
+                self.inflection_indexes[i-1]], 
+                [0, 0, self.sample_rate/2, self.sample_rate/2], 
+                color='blue', alpha=0.2, zorder=8)
+
+        #ax.scatter(cent_times, centroids, zorder=5, color='red')
+
+        ax.vlines(self.inflection_indexes, colors='orange', ymin=0, ymax=self.sample_rate/2)
+
+        ax.vlines([pair[0] for pair in self.transcription_array], 
+        colors='black', ymin=0, ymax=self.sample_rate/2)
+
+        ax.scatter(self.inflection_indexes, self.inflection_values, zorder=7, color='green')
+
+        ax.scatter(self.extrema_times, self.local_extrema, zorder=6, color='blue')
+
+        #avg_db_indexes = [self.audio_length*(i/len(self.average_decibels)) for i in range(len(self.average_decibels))]
+
+        #ax.scatter(avg_db_indexes, self.average_decibels, color='red')
+        #print(len(self.average_decibels), len(times), len(centroids))
+        ax.set_ylabel('Frequency [Hz]')
+        #ax.set_title('Spectrogram of the Audio File')
+        ax.set_title(str(" ".join([word[2] for word in self.transcription_array])))
+
+        plt.show()
+
+    def display_timit_phonemes(self):
+
+        # create spectrogram
+        frequencies, times, Sxx = self.create_spectrogram()
+
+        log_Sxx_thresholded = 10 * np.log10(Sxx)
+        #log_Sxx_thresholded = self.threshold_and_log_spectrogram(Sxx)
+
         self.time_labels = [pair[0] for pair in self.phoneme_regions]
         self.word_labels = [pair[2] for pair in self.phoneme_regions]
         # create plot

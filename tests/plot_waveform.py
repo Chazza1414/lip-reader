@@ -45,23 +45,23 @@ y_max_times = np.linspace(start=0, stop=3, num=len(y_max))
 y_min_times = np.linspace(start=0, stop=3, num=len(y_min))
 
 # Plot the waveform
-fig, ax = plt.subplots(2, 1)
+fig, ax = plt.subplots(1, 1)
 #librosa.display.waveshow(y, sr=sr, alpha=0.8)
 
-ax[0].vlines([pair[0] for pair in transcription_array], 
+ax.vlines([pair[0] for pair in transcription_array], 
 colors='black', ymin=-1, ymax=1)
-ax[0].hlines([0], 0, 3, colors='black')
-ax[0].plot(times, y, marker=None, linestyle='-')
-ax[0].set_xlabel("Time (seconds)")
-ax[0].set_ylabel("Amplitude")
+ax.hlines([0], 0, 3, colors='black')
+ax.plot(times, y, marker=None, linestyle='-')
+ax.set_xlabel("Time (seconds)")
+ax.set_ylabel("Amplitude")
 
-ax[1].vlines([pair[0] for pair in transcription_array], 
-colors='black', ymin=-1, ymax=1)
-ax[1].hlines([0], 0, 3, colors='black')
-ax[1].plot([time[1] for time in y_max], y_max, marker=None, linestyle='-', color='blue')
-ax[1].plot([time[1] for time in y_min], y_min, marker=None, linestyle='-', color='red')
-ax[1].set_xlabel("Time (seconds)")
-ax[1].set_ylabel("Amplitude")
+# ax[1].vlines([pair[0] for pair in transcription_array], 
+# colors='black', ymin=-1, ymax=1)
+# ax[1].hlines([0], 0, 3, colors='black')
+# ax[1].plot([time[1] for time in y_max], y_max, marker=None, linestyle='-', color='blue')
+# ax[1].plot([time[1] for time in y_min], y_min, marker=None, linestyle='-', color='red')
+# ax[1].set_xlabel("Time (seconds)")
+# ax[1].set_ylabel("Amplitude")
 
 #ax.set_xticks(time_labels)
 #ax.set_xticklabels(word_labels)
