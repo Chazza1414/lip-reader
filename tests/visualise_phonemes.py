@@ -6,6 +6,8 @@ from scipy.signal import spectrogram, argrelextrema
 from phoneme_library import PhonemeLibrary
 import json
 
+TIMIT_SAMPLE_RATE = 16000
+
 class VisualisePhonemes:
     def __init__(self, audio_file_path, frame_rate, transcription_array):
         self.audio_file_path = audio_file_path
@@ -38,7 +40,9 @@ class VisualisePhonemes:
         # create xtick words and labels
         self.create_xticks()
 
-        self.display_inflection_phonemes(2048, 128)
+        #self.display_inflection_phonemes(2048, 128)
+
+        self.display_timit_phonemes()
 
         
     
@@ -231,8 +235,31 @@ class VisualisePhonemes:
         return
 
     def assign_timit_phonemes(self):
+
         with open("timit_phonemes.json", "r") as file:
             timit_dict = json.load(file)
+
+        self.phoneme_regions = []
+
+        for i in range(len(self.transcription_array)):
+            curr_word = transcription_array[i][2]
+
+            if (curr_word == 'sil'):
+                continue
+
+            if (curr_word not in timit_dict):
+                print("error - can't find word in timit dict", curr_word)
+            else:
+                dict_spoken_speed = timit_dict[curr_word][1]/TIMIT_SAMPLE_RATE
+                spoken_speed = transcription_array[i][1] - transcription_array[i][0]
+                #print(spoken_speed/dict_spoken_speed)
+                word_phonemes = timit_dict[curr_word][2]
+
+                for phoneme in word_phonemes:
+                    time_index = transcription_array[i][0] + ((phoneme[1]/TIMIT_SAMPLE_RATE)*(spoken_speed/dict_spoken_speed))
+                    print(phoneme, time_index, transcription_array[i][0])
+                    self.phoneme_regions.append([time_index,phoneme[0]])
+        print(self.phoneme_regions)
 
     def add_index_to_array(self, array):
         for i, sub_array in enumerate(array):
@@ -334,14 +361,18 @@ class VisualisePhonemes:
 
     def display_timit_phonemes(self):
 
+        self.assign_timit_phonemes()
+
         # create spectrogram
         frequencies, times, Sxx = self.create_spectrogram()
 
         log_Sxx_thresholded = 10 * np.log10(Sxx)
+
+        #print(log_Sxx_thresholded)
         #log_Sxx_thresholded = self.threshold_and_log_spectrogram(Sxx)
 
         self.time_labels = [pair[0] for pair in self.phoneme_regions]
-        self.word_labels = [pair[2] for pair in self.phoneme_regions]
+        self.word_labels = [pair[1] for pair in self.phoneme_regions]
         # create plot
         fig, ax = plt.subplots()
 
@@ -353,39 +384,10 @@ class VisualisePhonemes:
         ax.set_xticks(self.time_labels)
         ax.set_xticklabels(self.word_labels)
 
-        inflection_length = len(self.inflection_indexes)
-        avg_db_length = len(self.average_decibels)
+        ax.vlines(self.time_labels, colors='orange', ymin=0, ymax=self.sample_rate/2)
 
-        for i in range(1, inflection_length):
-            start_fraction = int(((i-1)/inflection_length)*avg_db_length)
-            end_fraction = int(((i)/inflection_length)*avg_db_length)
-            #print(np.mean(self.average_decibels[start_fraction:end_fraction]), self.silent_average)
-            if (np.mean(self.average_decibels[start_fraction:end_fraction]) > self.silent_average):
-                ax.fill([
-                self.inflection_indexes[i-1], 
-                self.inflection_indexes[i], 
-                self.inflection_indexes[i], 
-                self.inflection_indexes[i-1]], 
-                [0, 0, self.sample_rate/2, self.sample_rate/2], 
-                color='blue', alpha=0.2, zorder=8)
-
-        #ax.scatter(cent_times, centroids, zorder=5, color='red')
-
-        ax.vlines(self.inflection_indexes, colors='orange', ymin=0, ymax=self.sample_rate/2)
-
-        ax.vlines([pair[0] for pair in self.transcription_array], 
-        colors='black', ymin=0, ymax=self.sample_rate/2)
-
-        ax.scatter(self.inflection_indexes, self.inflection_values, zorder=7, color='green')
-
-        ax.scatter(self.extrema_times, self.local_extrema, zorder=6, color='blue')
-
-        #avg_db_indexes = [self.audio_length*(i/len(self.average_decibels)) for i in range(len(self.average_decibels))]
-
-        #ax.scatter(avg_db_indexes, self.average_decibels, color='red')
-        #print(len(self.average_decibels), len(times), len(centroids))
         ax.set_ylabel('Frequency [Hz]')
-        #ax.set_title('Spectrogram of the Audio File')
+
         ax.set_title(str(" ".join([word[2] for word in self.transcription_array])))
 
         plt.show()
@@ -486,7 +488,7 @@ class VisualisePhonemes:
         # Convert the magnitude to decibels
         S_db = librosa.amplitude_to_db(S, ref=np.max)
 
-        print(S_db.shape)
+        #print(S_db.shape)
         self.total_decibels = np.sum(S_db, axis=0)
         self.average_decibels = np.mean(S_db, axis=0)
     

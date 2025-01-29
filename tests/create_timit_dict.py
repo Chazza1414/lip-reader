@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import json
+from phoneme_library import PhonemeLibrary
 
 TIMIT_PATH = 'H:/UNI/CS/Year3/Project/Dataset/archive/data/'
 
@@ -20,6 +21,9 @@ TIMIT_PATH = 'H:/UNI/CS/Year3/Project/Dataset/archive/data/'
 # 
 # sort the list alphabetically
 # write to a file
+
+PhonLib = PhonemeLibrary()
+timit_closure_dict = PhonLib.get_timit_closure_dict()
 
 word_dict = {}
 num_failed = 0
@@ -49,13 +53,23 @@ for data_type in os.listdir(TIMIT_PATH):
                                 #print(sentence)
                                 phonemes = {}
                                 with open(Path(current_path) / Path(sentence + '.PHN'), 'r') as file:
-                                    line = file.readline()
-                                    while line:
-                                        line_split = line.strip().split(' ')
-                                        phonemes[line_split[0]] = line_split[1:]
-                                        line = file.readline()
+                                    lines = file.readlines()
+                                    for i in range(len(lines)):
+                                        line_split = lines[i].strip().split(' ')
+                                        if (line_split[2] != 'epi' and line_split[2] != 'pau'):
+                                            if not (line_split[2] in timit_closure_dict):
+                                                phonemes[line_split[0]] = line_split[1:]
+                                            else:
+                                                # if the next phoneme isn't the end and is the correct stop symbol
+                                                next_phoneme = lines[i+1].strip().split(' ')
+                                                if (next_phoneme[2] != 'h#' and next_phoneme[2] in timit_closure_dict[line_split[2]]):
+                                                    phonemes[line_split[0]] = [next_phoneme[1], next_phoneme[2]]
+                                                    i += 1
+                                                else:
+                                                    phonemes[line_split[0]] = [line_split[1], timit_closure_dict[line_split[2]][0]]
+
                                 #print(phonemes)
-                                print(Path(current_path) / Path(sentence + '.WRD'))
+                                #print(Path(current_path) / Path(sentence + '.WRD'))
                                 words = []
                                 with open(Path(current_path) / Path(sentence + '.WRD'), 'r') as file:
                                     line = file.readline()
@@ -69,8 +83,12 @@ for data_type in os.listdir(TIMIT_PATH):
                                             
                                             while(int(curr_phoneme[0]) <= int(word_split[1])):
                                                 word_phonemes.append([curr_phoneme[1], int(curr_phoneme[0]) - int(start_time)])
+
                                                 start_time = curr_phoneme[0]
                                                 curr_phoneme = phonemes[start_time]
+
+                                            # if (word_split[2] == 'soon'):
+                                            #     print(current_path)
 
                                             # if the word has already been added to the dict
                                             if (word_split[2] in word_dict):
@@ -83,7 +101,30 @@ for data_type in os.listdir(TIMIT_PATH):
 
                                                 num_word_entries = word_dict[word_split[2]][0]
 
-                                                if (len(word_dict[word_split[2]][2]) != len(word_phonemes)):
+                                                # more phonemes in the dict than found
+                                                if (len(word_dict[word_split[2]][2]) > len(word_phonemes)):
+                                                    num_failed += 1
+                                                # one missing phoneme in the dict
+                                                elif (len(word_dict[word_split[2]][2]) + 1 == len(word_phonemes)):
+                                                    missing_index = -1
+                                                    phoneme_counter = 0
+                                                    #print(word_phonemes, word_split[2], word_dict[word_split[2]][2])
+                                                    while (missing_index == -1):
+                                                        #print(word_dict[word_split[2]][2][phoneme_counter][0], phoneme_counter)
+                                                        #print(word_dict[word_split[2]][2][phoneme_counter][0], word_phonemes[phoneme_counter][0])
+                                                        if (word_dict[word_split[2]][2][phoneme_counter][0] != word_phonemes[phoneme_counter][0]):
+                                                            missing_index == phoneme_counter
+                                                        if (phoneme_counter == len(word_dict[word_split[2]][2])-1):
+                                                            #print("missing position must be at end")
+                                                            missing_index = len(word_dict[word_split[2]][2])
+                                                        phoneme_counter += 1
+                                                    
+                                                    word_dict[word_split[2]][2].insert(missing_index, word_phonemes[missing_index])
+                                                    num_completed += 1
+                                                    #print("added phoneme entry", word_split[2])
+                                                elif (len(word_dict[word_split[2]][2]) + 1 < len(word_phonemes)):
+                                                    #print("error - more than one value missing from entry")
+                                                    #print(word_dict[word_split[2]][2], word_phonemes, word_split[2])
                                                     num_failed += 1
                                                 else:
                                                     for i in range(len(word_dict[word_split[2]][2])):
@@ -100,8 +141,9 @@ for data_type in os.listdir(TIMIT_PATH):
                                             #print(word_phonemes)
 
                                         line = file.readline()
-    print(word_dict)
-    print(num_completed, num_failed)
+    #print(word_dict)
+print(num_completed, num_failed)
 
-with open("timit_phonemes.json", "w") as file:
-    json.dump(word_dict, file, indent=4)
+# with open("timit_phonemes_1.json", "w") as file:
+#     json.dump(word_dict, file, indent=4)
+

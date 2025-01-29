@@ -1,6 +1,20 @@
 
 DICT_FILE_PATH = 'en-us/cmudict-en-us.dict'
 
+TIMIT_TO_CMU_PHONEMES = {
+    ''
+}
+
+TIMIT_CLOSURE_DICT = {
+    'bcl': ['b'],
+    'dcl': ['d', 'jh'],
+    'gcl': ['g'],
+    'pcl': ['p'],
+    'tck': ['t'],
+    'kcl': ['k'],
+    'tcl': ['ch']
+}
+
 class PhonemeLibrary:
     def __init__(self):
         self.dictionary = {}
@@ -13,6 +27,9 @@ class PhonemeLibrary:
     def get_phonemes(self, word):
         phonemes = str(self.dictionary.get(word))
         return phonemes.split(' ')
+    
+    def get_timit_closure_dict(self):
+        return TIMIT_CLOSURE_DICT
 
     def create_transcription_array(self, transcription_file_path, frame_rate):
         start_end_word = []
