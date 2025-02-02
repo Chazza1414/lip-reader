@@ -1,10 +1,6 @@
 
 DICT_FILE_PATH = 'en-us/cmudict-en-us.dict'
 
-TIMIT_TO_CMU_PHONEMES = {
-    ''
-}
-
 TIMIT_CLOSURE_DICT = {
     'bcl': ['b'],
     'dcl': ['d', 'jh'],
@@ -71,6 +67,27 @@ TIMIT_CMU_PHONEME_PAIRS = {
     'ax-h': 'AH'
 }
 
+VOWELS = ['IY',
+    'IH',
+    'EH',
+    'EY',
+    'AE',
+    'AA',
+    'AW',
+    'AY',
+    'AH',
+    'AO',
+    'OY',
+    'OW',
+    'UH',
+    'UW',
+    'UW',
+    'ER',
+    'AH',
+    'IH',
+    'ER',
+    'AH']
+
 class PhonemeLibrary:
     def __init__(self):
         self.dictionary = {}
@@ -81,11 +98,17 @@ class PhonemeLibrary:
                 self.dictionary[key] = phonemes
 
     def get_phonemes(self, word):
-        phonemes = str(self.dictionary.get(word))
-        return phonemes.split(' ')
+        if (word in self.dictionary):
+            phonemes = str(self.dictionary.get(word))
+            return phonemes.split(' ')
+        else:
+            return []
     
     def get_timit_closure_dict(self):
         return TIMIT_CLOSURE_DICT
+    
+    def get_vowels(self):
+        return VOWELS
     
     def convert_timit_array_to_cmu(self, timit_phonemes):
         cmu_phonemes = []
@@ -102,10 +125,13 @@ class PhonemeLibrary:
                 return 'h#'
         elif timit_phoneme in TIMIT_CMU_PHONEME_PAIRS:
             return TIMIT_CMU_PHONEME_PAIRS[timit_phoneme]
+        elif timit_phoneme == 'epi':
+            return 'epi'
+        elif timit_phoneme == 'pau':
+            return 'pau'
         else:
             print("phoneme missing from dict")
             raise KeyError()
-
 
     def create_transcription_array(self, transcription_file_path, frame_rate):
         start_end_word = []

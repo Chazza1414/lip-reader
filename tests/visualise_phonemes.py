@@ -40,9 +40,9 @@ class VisualisePhonemes:
         # create xtick words and labels
         self.create_xticks()
 
-        #self.display_inflection_phonemes(2048, 128)
+        self.display_inflection_phonemes(2048, 128)
 
-        self.display_timit_phonemes()
+        #self.display_timit_phonemes()
 
         
     
@@ -236,7 +236,7 @@ class VisualisePhonemes:
 
     def assign_timit_phonemes(self):
 
-        with open("timit_phonemes.json", "r") as file:
+        with open("timit_phonemes_2.json", "r") as file:
             timit_dict = json.load(file)
 
         self.phoneme_regions = []
@@ -248,17 +248,49 @@ class VisualisePhonemes:
                 continue
 
             if (curr_word not in timit_dict):
-                print("error - can't find word in timit dict", curr_word)
+                print("error - can't find word in timit dict ", curr_word)
+                similar_words = [key for key in timit_dict if curr_word in key]
+
+                if (len(similar_words) != 0) and len(curr_word) != 1:
+                    word_match = []
+                    for similar_word in similar_words:
+                        similar_word_phonemes = timit_dict[similar_word][2]
+                        curr_word_phonemes = PhonLib.get_phonemes(curr_word)
+                        matching_index = self.find_phoneme_match(curr_word_phonemes, similar_word_phonemes)
+
+                        if (matching_index == -1):
+                            print(curr_word_phonemes, similar_word_phonemes)
+                            print("character match not phoneme match")
+                        else:
+                            word_match = [similar_word, matching_index]
+                    
+                    if word_match != []:
+                        dict_spoken_time = sum(item[0] for item in timit_dict[word_match[0]][2][word_match[1:len(curr_word)]])
+                        dict_spoken_speed = dict_spoken_time/TIMIT_SAMPLE_RATE
+                        spoken_speed = transcription_array[i][1] - transcription_array[i][0]
+                        #print(spoken_speed/dict_spoken_speed)
+                        #word_phonemes = timit_dict[curr_word][2]
+
+                        time_index = transcription_array[i][0]
+
+                        for phoneme in curr_word_phonemes:
+                            time_index = time_index + ((phoneme[0]/TIMIT_SAMPLE_RATE)*(spoken_speed/dict_spoken_speed))
+                            print(phoneme, time_index, transcription_array[i][0])
+                            self.phoneme_regions.append([time_index,phoneme[1]])
+
+                print(similar_words)
             else:
                 dict_spoken_speed = timit_dict[curr_word][1]/TIMIT_SAMPLE_RATE
                 spoken_speed = transcription_array[i][1] - transcription_array[i][0]
                 #print(spoken_speed/dict_spoken_speed)
                 word_phonemes = timit_dict[curr_word][2]
 
+                time_index = transcription_array[i][0]
+
                 for phoneme in word_phonemes:
-                    time_index = transcription_array[i][0] + ((phoneme[1]/TIMIT_SAMPLE_RATE)*(spoken_speed/dict_spoken_speed))
+                    time_index = time_index + ((phoneme[0]/TIMIT_SAMPLE_RATE)*(spoken_speed/dict_spoken_speed))
                     print(phoneme, time_index, transcription_array[i][0])
-                    self.phoneme_regions.append([time_index,phoneme[0]])
+                    self.phoneme_regions.append([time_index,phoneme[1]])
         print(self.phoneme_regions)
 
     def add_index_to_array(self, array):
@@ -290,6 +322,12 @@ class VisualisePhonemes:
         print(sorted_decibels)
         return sorted_decibels
     
+    def find_phoneme_match(self, sub_word_phonemes, word_phonemes):
+        for i in range(len(word_phonemes) - len(sub_word_phonemes)):
+            if (word_phonemes[i:i+len(sub_word_phonemes)] == sub_word_phonemes):
+                return i
+        return -1
+
     def display_inflection_phonemes(self, n_fft, hop_length):
         # create centroids
         centroids = self.compute_spectral_centroids(n_fft, hop_length)
@@ -366,7 +404,8 @@ class VisualisePhonemes:
         # create spectrogram
         frequencies, times, Sxx = self.create_spectrogram()
 
-        log_Sxx_thresholded = 10 * np.log10(Sxx)
+        #log_Sxx_thresholded = 10 * np.log10(Sxx)
+        log_Sxx_thresholded = Sxx
 
         #print(log_Sxx_thresholded)
         #log_Sxx_thresholded = self.threshold_and_log_spectrogram(Sxx)
@@ -386,10 +425,42 @@ class VisualisePhonemes:
 
         ax.vlines(self.time_labels, colors='orange', ymin=0, ymax=self.sample_rate/2)
 
+        ax.vlines([pair[0] for pair in self.transcription_array], 
+        colors='black', ymin=0, ymax=self.sample_rate/2)
+
         ax.set_ylabel('Frequency [Hz]')
 
         ax.set_title(str(" ".join([word[2] for word in self.transcription_array])))
 
+        plt.show()
+        plt.close()
+
+        #self.display_waveform()
+
+    def display_waveform(self):
+        y, sr = librosa.load(self.audio_file_path)
+
+        y = gaussian_filter1d(y, sigma=4)
+        times = np.linspace(start=0, stop=3, num=len(y))
+
+        fig, ax = plt.subplots()
+        #librosa.display.waveshow(y, sr=sr, alpha=0.8)
+
+        ax.vlines([pair[0] for pair in transcription_array], 
+        colors='black', ymin=-1, ymax=1)
+        ax.hlines([0], 0, 3, colors='black')
+        ax.plot(times, y, marker=None, linestyle='-')
+        ax.set_xlabel("Time (seconds)")
+        ax.set_ylabel("Amplitude")
+
+        ax.set_xticks(self.time_labels)
+        ax.set_xticklabels(self.word_labels)
+
+        ax.vlines(self.time_labels, colors='orange', ymin=-1, ymax=1)
+
+        plt.title("Waveform of the Audio File")
+        plt.xlabel("Time (seconds)")
+        plt.ylabel("Amplitude")
         plt.show()
 
     def display_average_decibels(self):
