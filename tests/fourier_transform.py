@@ -6,7 +6,10 @@ from scipy.fftpack import fft
 from scipy.signal import find_peaks
 from phoneme_library import PhonemeLibrary
 from sklearn.cluster import KMeans
+from scipy.cluster.vq import kmeans as vq_kmeans
 from sklearn.cluster import AgglomerativeClustering
+from sklearn.mixture import GaussianMixture
+from collections import Counter
 
 TRANS_FILE_NAME = '../GRID/s23/align/bbad1s.align'
 PhonLib = PhonemeLibrary()
@@ -62,11 +65,21 @@ def plot_fourier_transform(audio_file, start_time, end_time):
     plt.tight_layout()
     plt.show()
 
-def dominant_frequencies(audio_file):
+def freq_mag_kmeans(audio_file):
     sample_rate, data = wav.read(audio_file)
+
+    current_word = transcription_array[1]
+    word_phonemes = len(PhonLib.get_phonemes(current_word[2]))
+    phrase_length = transcription_array[-1][1]
 
     if len(data.shape) > 1:
         data = data[:, 0]
+
+    # data = data[int(transcription_array[1][0]*(len(data)/phrase_length)):
+    # int(transcription_array[-1][0]*(len(data)/phrase_length))]
+
+    data = data[int(transcription_array[1][0]*(len(data)/phrase_length)):
+    int(transcription_array[2][0]*(len(data)/phrase_length))]
 
     data = gaussian_filter1d(data, sigma=5)
     N = len(data)
@@ -82,6 +95,9 @@ def dominant_frequencies(audio_file):
     samples = int(N/(step_size*sample_rate))
     n_samples = 5
 
+    frequencies = []
+    magnitudes = []
+
     for i in range(samples):
         current_sample = data[int(sample_rate*i*step_size):int(sample_rate*(i+sample_size)*step_size)]
     
@@ -91,114 +107,196 @@ def dominant_frequencies(audio_file):
         freq_magnitude = np.abs(freq_data)[:curr_N // 2]  # Take the positive frequencies
         freqs = np.fft.fftfreq(curr_N, d=1/sample_rate)[:curr_N // 2]
 
-        peaks, properties = find_peaks(freq_magnitude, height=0.1 * max(freq_magnitude))
+        peaks, _ = find_peaks(freq_magnitude, height=0.1 * max(freq_magnitude))
 
-        #sorted_peaks = sorted(peaks, key=lambda x: peaks[x], reverse=True)[:5]
-        sorted_peaks = np.array(peaks[np.argsort(properties["peak_heights"])[::-1]][:n_samples])
+        frequencies.extend(freqs[peaks])
+        magnitudes.extend(freq_magnitude[peaks])
+    
+    frequencies = np.array(frequencies)
+    magnitudes = np.array(magnitudes)
 
-        
+    #print(frequencies)
 
-        if (len(sorted_peaks) < n_samples):
-            for j in range(n_samples - len(sorted_peaks)):
-                sorted_peaks = np.append(sorted_peaks, [0])
-                #sorted_peaks = sorted_peaks + [0]
-            #print(sorted_peaks)
-        #print(sorted_peaks)
+    count = Counter(frequencies)
+    print(count.most_common(8))
+    
 
-        #all_peaks.append(sorted_peaks)[freqs[i] for i in sorted_peaks]
-        all_peaks.extend([freqs[i] for i in sorted_peaks])
-        time_ticks = [(N/sample_rate)*(i/samples)]*len(sorted_peaks)
-        #print(time_ticks)
-        time2.extend(time_ticks)
+    weights = (magnitudes - magnitudes.min()) / (magnitudes.max() - magnitudes.min())  # Normalize [0,1]
+    weights = np.round(1 + 9 * weights).astype(int)  # Scale to range [1,10]
 
-    current_word = transcription_array[1]
-    word_phonemes = len(PhonLib.get_phonemes(current_word[2]))
+    expanded_frequencies = np.repeat(frequencies, weights)
+
+    centroids, _ = vq_kmeans(expanded_frequencies.reshape(-1, 1), 3)
+    #print(centroids)
+
+    frequencies_reshaped = frequencies.reshape(-1, 1)
+
+    # peaks, properties = find_peaks(magnitudes, height=0.1 * max(magnitudes))
+    # sorted_peaks = np.array(peaks[np.argsort(properties["peak_heights"])])
+    # print(peaks)
+    # print(sorted_peaks)
+
+    # X = np.column_stack((frequencies, magnitudes))
+
+    # gmm = GaussianMixture(n_components=3, random_state=42)
+    # gmm.fit(X)
+
+    # print(gmm.means_)
+
+
+    #print(freq_mag)
+
+    kmeans = KMeans(n_clusters=4, random_state=42, n_init=10)
+    kmeans.fit(frequencies_reshaped)
+    #kmeans.fit(np.column_stack((magnitudes, frequencies)))
+
+    labels = kmeans.labels_
+    centroids = kmeans.cluster_centers_
+
+    plt.scatter(frequencies, magnitudes, c=labels, cmap='viridis', marker='o', edgecolor='k')
+    plt.vlines(centroids, ymin=min(magnitudes), ymax=max(magnitudes), colors='red', linestyles='dashed', label='Cluster Centers')
+    #plt.scatter(centroids[:, 0], centroids[:, 1], c='red', marker='X', s=200, label='Centroids')
+    plt.xlabel('Frequency')
+    plt.ylabel('Magnitude')
+    plt.title('K-Means Clustering of Frequency-Magnitude Data')
+    plt.legend()
+    plt.show()
+
+def dominant_frequencies(audio_file):
+    sample_rate, data = wav.read(audio_file)
+
+    if len(data.shape) > 1:
+        data = data[:, 0]
+
+    data = gaussian_filter1d(data, sigma=5)
+    N = len(data)
     phrase_length = transcription_array[-1][1]
 
-    k2d = []
-    curr_time = time2[0]
-    time_step_values = []
+    sample_size = 8
+    step_size = 0.005
 
-    for i in range(len(time2)):
-        if (time2[i] != curr_time):
-            k2d.append(time_step_values)
-            time_step_values = [all_peaks[i]]
-            curr_time = time2[i]
-        else:
-            time_step_values.append(all_peaks[i])
+    all_peaks = []
+
+    time2 = []
+    #print(N, sample_size, sample_rate)
+    #print(N/(sample_size*sample_rate))
+    samples = int(N/(step_size*sample_rate))
+    n_samples = 5
+
+    freq_mag = []
+    frequencies = []
+    times = []
+    magnitudes = []
+    freq_lines = []
+
+    for word in transcription_array[1:-1]:
+        current_word = data[int(word[0]*(len(data)/phrase_length)):int(word[1]*(len(data)/phrase_length))]
+        #print(word[0],phrase_length)
+        #print(len(current_word))
+        current_frequencies = []
+        current_magnitudes = []
+        samples = int(len(current_word)/(step_size*sample_rate))
+        #print(samples)
+        for i in range(samples):
+            #current_sample = data[int(sample_rate*i*step_size):int(sample_rate*(i+sample_size)*step_size)]
+            current_sample = current_word[int(sample_rate*i*step_size):int(sample_rate*(i+sample_size)*step_size)]
+            #print(len(current_sample), i)
+        
+            # Compute the FFT
+            curr_N = len(current_sample)
+            freq_data = fft(current_sample)
+            freq_magnitude = np.abs(freq_data)[:curr_N // 2]  # Take the positive frequencies
+            freqs = np.fft.fftfreq(curr_N, d=1/sample_rate)[:curr_N // 2]
+
+            peaks, properties = find_peaks(freq_magnitude, height=0.1 * max(freq_magnitude))
+
+            #sorted_peaks = sorted(peaks, key=lambda x: peaks[x], reverse=True)[:5]
+            
+            #sorted_peaks = np.array(peaks[np.argsort(properties["peak_heights"])[::-1]][:n_samples])
+
+            current_frequencies.extend(freqs[peaks])
+            current_magnitudes.extend(freq_magnitude[peaks])
+            time_indexes = [word[0] + ((len(current_word)/sample_rate)*(i/samples))]*len(freqs[peaks])
+            times.extend(time_indexes)
+            
+
+            # if (len(sorted_peaks) < n_samples):
+            #     for j in range(n_samples - len(sorted_peaks)):
+            #         sorted_peaks = np.append(sorted_peaks, [0])
+            #         sorted_peaks = sorted_peaks + [0]
+                #print(sorted_peaks)
+            #print(sorted_peaks)
+
+            #all_peaks.append(sorted_peaks)[freqs[i] for i in sorted_peaks]
+            # all_peaks.extend([freqs[i] for i in sorted_peaks])
+            # time_ticks = [(N/sample_rate)*(i/samples)]*len(sorted_peaks)
+            # #print(time_ticks)
+            # time2.extend(time_ticks)
+
+        count = Counter(current_frequencies)
+        freq_lines.extend(common[0] for common in count.most_common(n_samples))
+        frequencies.extend(current_frequencies)
+        #print(len(frequencies))
+        
+        # for common in count.most_common(n_samples):
+        #     freq_lines.append([word[0], common[0]])
+    #print(freq_lines)
+    #print(len(times), len(frequencies))
+    #print(freq_mag)
+
+
+
+    # current_word = transcription_array[1]
+    # word_phonemes = len(PhonLib.get_phonemes(current_word[2]))
+    
+
+    # k2d = []
+    # curr_time = time2[0]
+    # time_step_values = []
+
+    # for i in range(len(time2)):
+    #     if (time2[i] != curr_time):
+    #         k2d.append(time_step_values)
+    #         time_step_values = [all_peaks[i]]
+    #         curr_time = time2[i]
+    #     else:
+    #         time_step_values.append(all_peaks[i])
     
     #print(len(k2d))
     #print(k2d[int(current_word[0]*(len(k2d)/phrase_length)):int(current_word[1]*(len(k2d)/phrase_length))])
     #print(all_peaks)
     
-    snippet = k2d[int(current_word[0]*(len(k2d)/phrase_length)):int(current_word[1]*(len(k2d)/phrase_length))]
+    #snippet = k2d[int(current_word[0]*(len(k2d)/phrase_length)):int(current_word[1]*(len(k2d)/phrase_length))]
+    # snippet = k2d[int(transcription_array[1][0]*(len(k2d)/phrase_length)):
+    # int(transcription_array[-1][0]*(len(k2d)/phrase_length))]
     #print(len(snippet))
 
-    kmeans = KMeans(n_clusters=word_phonemes, random_state=42, n_init=10)
-    kmeans.fit(snippet)
+    # kmeans = KMeans(n_clusters=word_phonemes, random_state=42, n_init=10)
+    # kmeans.fit(snippet)
 
     #print(kmeans.cluster_centers_, kmeans.labels_)
 
-    k_means_times = np.linspace(current_word[0], current_word[1], len(kmeans.labels_))
+    # k_means_times = np.linspace(current_word[0], current_word[1], len(kmeans.labels_))
 
-    agg_clustering = AgglomerativeClustering(n_clusters=word_phonemes, metric='euclidean', linkage='complete')
-    labels = agg_clustering.fit_predict(snippet)
+    # agg_clustering = AgglomerativeClustering(n_clusters=word_phonemes, metric='euclidean', linkage='complete')
+    # labels = agg_clustering.fit_predict(snippet)
 
-    print(labels)
+    # print(labels)
 
     # Plot the frequency spectrum
     #print(time2, all_peaks)
     #print(N)
     plt.figure(figsize=(12, 6))
-    # plt.subplot(2, 1, 1)
-    # time = np.linspace(0, len(snippet), len(snippet)) * 5
-    # plt.scatter(time, snippet)
-
-    # plt.subplot(2, 1, 1)
-    # time = np.linspace(0, N/sample_rate, N)
-    # plt.plot(time, data)
-    # plt.title("Audio Waveform")
-    # plt.xlabel("Time [s]")
-    # plt.ylabel("Amplitude")
-
-    # plt.plot(2, 1, 2)
-    #time2 = np.linspace(0, N/sample_size, len(all_peaks))
-    #plt.plot(time2, all_peaks)
-    #print(k_means_times)
-    # for k in range(len(k_means_times)-1):
-    #     if (kmeans.labels_[k] == 0):
-    #         plt.fill([
-    #             k_means_times[k], 
-    #             k_means_times[k+1], 
-    #             k_means_times[k+1], 
-    #             k_means_times[k]], 
-    #             [0, 0, max(all_peaks), max(all_peaks)], 
-    #             color='blue', alpha=0.2, zorder=8)
-    #         #plt.fill_between(k_means_times[k], k_means_times[k+1], alpha=0.5, color='blue')
-    #     elif (kmeans.labels_[k] == 1):
-    #         #plt.fill_between(k_means_times[k], k_means_times[k+1], alpha=0.5, color='green')
-    #         plt.fill([
-    #             k_means_times[k], 
-    #             k_means_times[k+1], 
-    #             k_means_times[k+1], 
-    #             k_means_times[k]], 
-    #             [0, 0, max(all_peaks), max(all_peaks)], 
-    #             color='green', alpha=0.2, zorder=8)
-    #     elif (kmeans.labels_[k] == 2):
-    #         #plt.fill_between(k_means_times[k], k_means_times[k+1], alpha=0.5, color='red')
-    #         plt.fill([
-    #             k_means_times[k], 
-    #             k_means_times[k+1], 
-    #             k_means_times[k+1], 
-    #             k_means_times[k]], 
-    #             [0, 0, max(all_peaks), max(all_peaks)], 
-    #             color='red', alpha=0.2, zorder=8)
 
     #plt.scatter(X[:, 0], X[:, 1], c=labels, cmap='viridis', s=50, marker='o', edgecolors='k')
-
-    plt.scatter(time2, all_peaks)
+    #plt.hlines()
+    for i in range(0, len(freq_lines), n_samples):
+        #print(i//5)
+        plt.hlines(freq_lines[i:i+n_samples], transcription_array[1+(i//5)][0], transcription_array[1+(i//5)][1], colors=['red'])
+    plt.scatter(times, frequencies)
+    #plt.scatter(time2, all_peaks)
     plt.vlines([pair[0] for pair in transcription_array], 
-        colors='black', ymin=0, ymax=max(all_peaks))
+        colors='black', ymin=0, ymax=max(frequencies))
     plt.title("Fourier Transform (Frequency Spectrum)")
     plt.xlabel("Time")
     plt.ylabel("Frequency")
@@ -215,3 +313,5 @@ def dominant_frequencies(audio_file):
 #plot_fourier_transform('../GRID/s23_50kHz/s23/bbad1s.wav', 0.5725, 0.5850)
 
 dominant_frequencies('../GRID/s23_50kHz/s23/bbad1s.wav')
+
+#freq_mag_kmeans('../GRID/s23_50kHz/s23/bbad1s.wav')
