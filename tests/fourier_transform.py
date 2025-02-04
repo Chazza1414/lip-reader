@@ -183,11 +183,14 @@ def dominant_frequencies(audio_file):
     samples = int(N/(step_size*sample_rate))
     n_samples = 5
 
-    freq_mag = []
+    #freq_mag = []
     frequencies = []
     times = []
-    magnitudes = []
+    #magnitudes = []
     freq_lines = []
+
+    plt.figure(figsize=(12, 6))
+    colours = ['red', 'blue', 'green', 'orange', 'purple']
 
     for word in transcription_array[1:-1]:
         current_word = data[int(word[0]*(len(data)/phrase_length)):int(word[1]*(len(data)/phrase_length))]
@@ -195,6 +198,7 @@ def dominant_frequencies(audio_file):
         #print(len(current_word))
         current_frequencies = []
         current_magnitudes = []
+        current_times = []
         samples = int(len(current_word)/(step_size*sample_rate))
         #print(samples)
         for i in range(samples):
@@ -217,84 +221,47 @@ def dominant_frequencies(audio_file):
             current_frequencies.extend(freqs[peaks])
             current_magnitudes.extend(freq_magnitude[peaks])
             time_indexes = [word[0] + ((len(current_word)/sample_rate)*(i/samples))]*len(freqs[peaks])
-            times.extend(time_indexes)
-            
-
-            # if (len(sorted_peaks) < n_samples):
-            #     for j in range(n_samples - len(sorted_peaks)):
-            #         sorted_peaks = np.append(sorted_peaks, [0])
-            #         sorted_peaks = sorted_peaks + [0]
-                #print(sorted_peaks)
-            #print(sorted_peaks)
-
-            #all_peaks.append(sorted_peaks)[freqs[i] for i in sorted_peaks]
-            # all_peaks.extend([freqs[i] for i in sorted_peaks])
-            # time_ticks = [(N/sample_rate)*(i/samples)]*len(sorted_peaks)
-            # #print(time_ticks)
-            # time2.extend(time_ticks)
+            current_times.extend(time_indexes)
+            #times.extend(time_indexes)
 
         count = Counter(current_frequencies)
-        freq_lines.extend(common[0] for common in count.most_common(n_samples))
+        top_frequencies = [common[0] for common in count.most_common(n_samples)]
+        top_frequencies = sorted(top_frequencies, reverse=True)
+        plt.hlines(top_frequencies, word[0], word[1], colors=colours)
+
+        closest_line_indices = np.argmin(
+            [np.abs(current_frequencies - line) for line in top_frequencies], axis=0)
+        point_colours = [colours[i] for i in closest_line_indices]
+        plt.scatter(current_times, current_frequencies, c=point_colours)
+        #freq_lines.extend()
         frequencies.extend(current_frequencies)
+        times.extend(current_times)
         #print(len(frequencies))
-        
-        # for common in count.most_common(n_samples):
-        #     freq_lines.append([word[0], common[0]])
-    #print(freq_lines)
-    #print(len(times), len(frequencies))
-    #print(freq_mag)
-
-
-
-    # current_word = transcription_array[1]
-    # word_phonemes = len(PhonLib.get_phonemes(current_word[2]))
     
-
-    # k2d = []
-    # curr_time = time2[0]
-    # time_step_values = []
-
-    # for i in range(len(time2)):
-    #     if (time2[i] != curr_time):
-    #         k2d.append(time_step_values)
-    #         time_step_values = [all_peaks[i]]
-    #         curr_time = time2[i]
-    #     else:
-    #         time_step_values.append(all_peaks[i])
     
-    #print(len(k2d))
-    #print(k2d[int(current_word[0]*(len(k2d)/phrase_length)):int(current_word[1]*(len(k2d)/phrase_length))])
-    #print(all_peaks)
     
-    #snippet = k2d[int(current_word[0]*(len(k2d)/phrase_length)):int(current_word[1]*(len(k2d)/phrase_length))]
-    # snippet = k2d[int(transcription_array[1][0]*(len(k2d)/phrase_length)):
-    # int(transcription_array[-1][0]*(len(k2d)/phrase_length))]
-    #print(len(snippet))
-
-    # kmeans = KMeans(n_clusters=word_phonemes, random_state=42, n_init=10)
-    # kmeans.fit(snippet)
-
-    #print(kmeans.cluster_centers_, kmeans.labels_)
-
-    # k_means_times = np.linspace(current_word[0], current_word[1], len(kmeans.labels_))
-
-    # agg_clustering = AgglomerativeClustering(n_clusters=word_phonemes, metric='euclidean', linkage='complete')
-    # labels = agg_clustering.fit_predict(snippet)
-
-    # print(labels)
-
-    # Plot the frequency spectrum
-    #print(time2, all_peaks)
-    #print(N)
-    plt.figure(figsize=(12, 6))
-
     #plt.scatter(X[:, 0], X[:, 1], c=labels, cmap='viridis', s=50, marker='o', edgecolors='k')
     #plt.hlines()
-    for i in range(0, len(freq_lines), n_samples):
-        #print(i//5)
-        plt.hlines(freq_lines[i:i+n_samples], transcription_array[1+(i//5)][0], transcription_array[1+(i//5)][1], colors=['red'])
-    plt.scatter(times, frequencies)
+
+    # for i in range(0, len(freq_lines), n_samples):
+    #     #print(i//5)
+    #     curr_word = transcription_array[1+(i//5)]
+    #     freq_slice = frequencies[
+    #             int(len(frequencies)*(curr_word[0]/phrase_length)):
+    #             int(len(frequencies)*(curr_word[1]/phrase_length))]
+    #     times_slice = times[
+    #             int(len(frequencies)*(curr_word[0]/phrase_length)):
+    #             int(len(frequencies)*(curr_word[1]/phrase_length))]
+    #     closest_line_indices = np.argmin(
+    #         [np.abs(freq_slice - line) for line in freq_lines[i:i+n_samples]], axis=0)
+    #     point_clours = [colours[i] for i in closest_line_indices]
+        
+    #     plt.scatter(times_slice, freq_slice, c=point_clours)
+
+    #     plt.hlines(freq_lines[i:i+n_samples], transcription_array[1+(i//5)][0], transcription_array[1+(i//5)][1], colors=colours)
+    
     #plt.scatter(time2, all_peaks)
+    #plt.scatter(times, frequencies)
     plt.vlines([pair[0] for pair in transcription_array], 
         colors='black', ymin=0, ymax=max(frequencies))
     plt.title("Fourier Transform (Frequency Spectrum)")
