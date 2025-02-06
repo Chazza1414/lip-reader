@@ -10,6 +10,7 @@ from scipy.cluster.vq import kmeans as vq_kmeans
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.mixture import GaussianMixture
 from collections import Counter
+from scipy.signal import resample
 
 TRANS_FILE_NAME = '../GRID/s23/align/bbad1s.align'
 PhonLib = PhonemeLibrary()
@@ -168,6 +169,9 @@ def dominant_frequencies(audio_file):
     if len(data.shape) > 1:
         data = data[:, 0]
 
+    # sample_rate = sample_rate // 2  # Reduce sample rate by half
+    # data = resample(data, len(data) // 2)
+
     data = gaussian_filter1d(data, sigma=5)
     N = len(data)
     phrase_length = transcription_array[-1][1]
@@ -181,16 +185,17 @@ def dominant_frequencies(audio_file):
     #print(N, sample_size, sample_rate)
     #print(N/(sample_size*sample_rate))
     samples = int(N/(step_size*sample_rate))
-    n_samples = 5
+    n_samples = 4
 
-    #freq_mag = []
     frequencies = []
     times = []
-    #magnitudes = []
-    freq_lines = []
+
+    freq_sum = []
+    distances = []
+    d_times = []
 
     plt.figure(figsize=(12, 6))
-    colours = ['red', 'blue', 'green', 'orange', 'purple']
+    colours = ['red', 'blue', 'green', 'orange', 'purple', 'brown', 'yellow', 'magenta']
 
     for word in transcription_array[1:-1]:
         current_word = data[int(word[0]*(len(data)/phrase_length)):int(word[1]*(len(data)/phrase_length))]
@@ -217,11 +222,12 @@ def dominant_frequencies(audio_file):
             #sorted_peaks = sorted(peaks, key=lambda x: peaks[x], reverse=True)[:5]
             
             #sorted_peaks = np.array(peaks[np.argsort(properties["peak_heights"])[::-1]][:n_samples])
-
-            current_frequencies.extend(freqs[peaks])
+            freqs[peaks]
+            current_frequencies.extend([f for f in freqs[peaks] if f > 100])
             current_magnitudes.extend(freq_magnitude[peaks])
-            time_indexes = [word[0] + ((len(current_word)/sample_rate)*(i/samples))]*len(freqs[peaks])
+            time_indexes = [word[0] + ((len(current_word)/sample_rate)*(i/samples))]*len([f for f in freqs[peaks] if f > 100])
             current_times.extend(time_indexes)
+            #d_times.extend([word[0] + ((len(current_word)/sample_rate)*(i/samples))])
             #times.extend(time_indexes)
 
         count = Counter(current_frequencies)
@@ -233,35 +239,30 @@ def dominant_frequencies(audio_file):
             [np.abs(current_frequencies - line) for line in top_frequencies], axis=0)
         point_colours = [colours[i] for i in closest_line_indices]
         plt.scatter(current_times, current_frequencies, c=point_colours)
+
+        iter_time = current_times[0]
+        iter_count = 0
+        iter_sum = 0
+        for k in range(len(current_times)):
+            if iter_time != current_times[k]:
+                distances.append(iter_count)
+                d_times.append(iter_time)
+                freq_sum.append(iter_sum)
+                iter_time = current_times[k]
+                iter_count = 0
+                iter_sum = 0
+            iter_count += 10/(1 + abs(top_frequencies[closest_line_indices[k]] - current_frequencies[k]))
+            iter_sum += top_frequencies[closest_line_indices[k]]
+    
+
+
         #freq_lines.extend()
         frequencies.extend(current_frequencies)
         times.extend(current_times)
         #print(len(frequencies))
     
-    
-    
-    #plt.scatter(X[:, 0], X[:, 1], c=labels, cmap='viridis', s=50, marker='o', edgecolors='k')
-    #plt.hlines()
+    #print(distances)
 
-    # for i in range(0, len(freq_lines), n_samples):
-    #     #print(i//5)
-    #     curr_word = transcription_array[1+(i//5)]
-    #     freq_slice = frequencies[
-    #             int(len(frequencies)*(curr_word[0]/phrase_length)):
-    #             int(len(frequencies)*(curr_word[1]/phrase_length))]
-    #     times_slice = times[
-    #             int(len(frequencies)*(curr_word[0]/phrase_length)):
-    #             int(len(frequencies)*(curr_word[1]/phrase_length))]
-    #     closest_line_indices = np.argmin(
-    #         [np.abs(freq_slice - line) for line in freq_lines[i:i+n_samples]], axis=0)
-    #     point_clours = [colours[i] for i in closest_line_indices]
-        
-    #     plt.scatter(times_slice, freq_slice, c=point_clours)
-
-    #     plt.hlines(freq_lines[i:i+n_samples], transcription_array[1+(i//5)][0], transcription_array[1+(i//5)][1], colors=colours)
-    
-    #plt.scatter(time2, all_peaks)
-    #plt.scatter(times, frequencies)
     plt.vlines([pair[0] for pair in transcription_array], 
         colors='black', ymin=0, ymax=max(frequencies))
     plt.title("Fourier Transform (Frequency Spectrum)")
@@ -269,6 +270,16 @@ def dominant_frequencies(audio_file):
     plt.ylabel("Frequency")
     
     plt.tight_layout()
+    plt.show()
+    plt.close()
+
+    #distances = gaussian_filter1d(distances, sigma=1)
+    freq_sum = gaussian_filter1d(freq_sum, sigma=1)
+
+    #plt.plot(d_times, distances)
+    plt.plot(d_times, freq_sum)
+    plt.vlines([pair[0] for pair in transcription_array], 
+        colors='black', ymin=0, ymax=max(freq_sum))
     plt.show()
 
 # Example usage

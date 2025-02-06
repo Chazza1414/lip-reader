@@ -88,6 +88,35 @@ VOWELS = ['IY',
     'ER',
     'AH']
 
+LETTER_TO_WORD = {
+    'a': 'a',
+    'b': 'bee',
+    'c': 'see',
+    'd': 'dee',
+    'e': 'ee',
+    'f': 'eh f',
+    'g': 'gee',
+    'h': 'h',
+    'i': 'i',
+    'j': 'jay',
+    'k': 'kay',
+    'l': 'kay',
+    'm': 'em',
+    'n': 'en',
+    'o': 'oh',
+    'p': 'pee',
+    'q': 'queue',
+    'r': 'are',
+    's': 'es',
+    't': 'tee',
+    'u': 'you',
+    'v': 'vee',
+    'w': 'w',
+    'x': 'ex',
+    'y': 'why',
+    'z': 'zed',
+}
+
 class PhonemeLibrary:
     def __init__(self):
         self.dictionary = {}
