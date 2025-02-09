@@ -11,11 +11,25 @@ import glob
 from keras import backend as K
 from common.constants import IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_CHANNELS, DATASET_PATH
 from videos import Video
+import multiprocessing
 
 class Generator():
-    def __init__(self, steps_per_epoch, dataset_path=DATASET_PATH):
+    def __init__(self, minibatch_size, steps_per_epoch, dataset_path=DATASET_PATH, **kwargs):
         self.dataset_path = dataset_path
+        self.minibatch_size = minibatch_size
         self.steps_per_epoch = steps_per_epoch
+        self.img_c          = IMAGE_CHANNELS
+        self.img_w          = IMAGE_WIDTH
+        self.img_h          = IMAGE_HEIGHT
+        self.cur_train_index = multiprocessing.Value('i', 0)
+        self.cur_val_index   = multiprocessing.Value('i', 0)
+        self.steps_per_epoch     = kwargs.get('steps_per_epoch', None)
+        self.validation_steps    = kwargs.get('validation_steps', None)
+        self.process_epoch       = -1
+        self.shared_train_epoch  = multiprocessing.Value('i', -1)
+        self.process_train_epoch = -1
+        self.process_train_index = -1
+        self.process_val_index   = -1
     
     def build(self):
         self.train_path     = os.path.join(self.dataset_path, 'train')
