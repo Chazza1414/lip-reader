@@ -30,7 +30,7 @@ def train(run_name, start_epoch, stop_epoch, img_c, img_w, img_h, frames_n, abso
                                 absolute_max_string_len=absolute_max_string_len,
                                 curriculum=curriculum, start_epoch=start_epoch).build()
 
-    lipnet = LipNet(img_c=img_c, img_w=img_w, img_h=img_h, frames_n=frames_n,
+    lipnet = LipReader(img_c=img_c, img_w=img_w, img_h=img_h, frames_n=frames_n,
                             absolute_max_string_len=absolute_max_string_len, output_size=lip_gen.get_output_size())
     lipnet.summary()
 

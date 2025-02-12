@@ -1,3 +1,4 @@
+import concurrent.futures
 import http
 import requests
 import xml.etree.ElementTree as ET
@@ -6,6 +7,7 @@ import glob
 import subprocess
 import sys
 from pathlib import Path
+import concurrent
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
@@ -18,7 +20,7 @@ class webMaus:
     def increment_api_counter(self):
         with self.lock:
             self.api_counter += 1
-            print("Calls: " + self.api_counter)
+            print("Calls: " + str(self.api_counter))
 
     def downloadFile(self, download_link, download_type):
         res = requests.get(download_link)
@@ -40,12 +42,18 @@ class webMaus:
 
         if (res.status_code == 200):
             root = ET.fromstring(res.text)
-            download_link = root.find("downloadLink").text
-            success = root.find("success").text
+
+            download_link = root.find("downloadLink")
+            if (download_link is not None):
+                download_link = download_link.text
+
+            success = root.find("success")
+            if (success is not None):
+                success = success.text
 
             if(success == 'true' and download_link):
-                self.thread_reqs += 1
-                print(self.thread_reqs)
+                self.increment_api_counter()
+                
                 return self.downloadFile(download_link, 'text')
             else:
                 raise KeyError("webMAUS error with g2p")
@@ -65,8 +73,12 @@ class webMaus:
 
         if (res.status_code == 200):
             root = ET.fromstring(res.text)
-            download_link = root.find("downloadLink").text
-            success = root.find("success").text
+            download_link = root.find("downloadLink")
+            if (download_link is not None):
+                download_link = download_link.text
+            success = root.find("success")
+            if (success is not None):
+                success = success.text
 
             self.increment_api_counter()
 
@@ -124,6 +136,9 @@ class webMaus:
 
     def readFiles(self, audio_file_location, transcription_file_location, phoneme_alignment_location):
         tasks = []
+        speaker_list = ['s1','s2','s3','s4','s5','s6','s10','s11','s12','s13','s14','s15',
+        's16','s17','s18','s19','s20','s22','s23','s24','s25','s26','s27','s28','s29','s30',
+        's31','s32','s33','s34']
         
         for compressed_path in [d for d in Path(audio_file_location).glob('*') if d.is_dir() and d.suffix != '.tar']:
 
@@ -134,43 +149,142 @@ class webMaus:
                 for speaker_path in glob.glob(os.path.join(compressed_path, '*')):
 
                     speaker_id = os.path.splitext(speaker_path)[0].split('\\')[-1]
-                    print("speaker: " + speaker_id)
-                    n = 1
 
-                    for audio_path in glob.glob(os.path.join(speaker_path, '*')):
-                        print(str(n) + "/1000")
+                    if (speaker_id not in speaker_list):
+                        print("speaker: " + speaker_id)
+                        n = 1
 
-                        #print(audio_path)
-                        audio_name = os.path.splitext(audio_path)[0].split('\\')[-1]
-                        transcription_path = os.path.join(transcription_file_location, speaker_id, 'align', audio_name)
-                        transcription_path += '.align'
+                        for audio_path in glob.glob(os.path.join(speaker_path, '*')):
+                            print(str(n) + "/1000")
 
-                        # the following creates a single line containing the transcription of the audio file for the general webMAUS application
-                        text = ''
-                        with open(transcription_path, 'r') as file:
-                            for line in file.readlines()[1:-1]:
-                                line_split = line.split(' ')
-                                text += line_split[-1] + ' '
+                            #print(audio_path)
+                            audio_name = os.path.splitext(audio_path)[0].split('\\')[-1]
+                            transcription_path = os.path.join(transcription_file_location, speaker_id, 'align', audio_name)
+                            transcription_path += '.align'
 
-                        text = text.strip()
-                        text += '\n'
+                            # the following creates a single line containing the transcription of the audio file for the general webMAUS application
+                            text = ''
+                            with open(transcription_path, 'r') as file:
+                                for line in file.readlines()[1:-1]:
+                                    line_split = line.split(' ')
+                                    text += line_split[-1] + ' '
 
-                        #print(text)
-                        phon_file_name = speaker_id + '_' + audio_name + '.txt'
-                        phon_write_location = os.path.join(phoneme_alignment_location, phon_file_name)
+                            text = text.strip()
+                            text += '\n'
 
-                        tasks.append((text, audio_path, phon_write_location))
+                            #print(text)
+                            phon_file_name = speaker_id + '_' + audio_name + '.txt'
+                            phon_write_location = os.path.join(phoneme_alignment_location, phon_file_name)
 
-                        #self.runProcess(text, audio_path, phon_write_location)
+                            tasks.append((text, audio_path, phon_write_location))
 
-                        n += 1
+                            #self.runProcess(text, audio_path, phon_write_location)
+
+                            n += 1
         with self.executor as executor:  # Ensure proper shutdown
-            executor.map(lambda args: self.runProcess(*args), tasks)
+            #executor.map(lambda args: self.runProcess(*args), tasks)
+            futures = []
+            n = 0
+            for (t, a, p) in tasks:
+                #print(n, t, a, p)
+                
+                n += 1
+                futures.append(executor.submit(self.runProcess, text=t, audio_file_path=a, phon_write_location=p))
 
+            #print(futures[0])
+            print("starting execution")
 
+            for future in concurrent.futures.as_completed(futures):
+                print(future.result())
+            #executor.map(self.runProcess,)
+    
+    def find_missing_alignments(self, transcription_file_location, phoneme_alignment_location):
+        missing = []
+        for speaker_path in [d for d in Path(transcription_file_location).glob('*') if d.is_dir() and d.suffix != '.tar']:
 
-wm = webMaus(max_workers=10)
-wm.readFiles("H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\audio", 
-             "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\transcription", 
-             "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\datasets\\phoneme-alignment")
+                speaker_id = os.path.splitext(speaker_path)[0].split('\\')[-1]
+
+                #print("speaker: " + speaker_id)
+                #n = 1
+
+                for transcription_path in glob.glob(os.path.join(speaker_path, '*', '*')):
+                    #print(str(n) + "/1000")
+
+                    #print(audio_path)
+                    transcription_name = os.path.splitext(transcription_path)[0].split('\\')[-1]
+                    alignment_name = speaker_id + "_" + transcription_name + '.txt'
+                    alignment_path = os.path.join(phoneme_alignment_location, alignment_name)
+
+                    if not (os.path.isfile(alignment_path)):
+                        #print(alignment_path)
+                        missing.append([speaker_id, transcription_name])
+        
+        return missing
+
+    def specificReadFiles(self, audio_file_location, transcription_file_location, phoneme_alignment_location, missing):
+        for missing_file in missing:
+                
+            audio_path = os.path.join(audio_file_location, missing_file[0]+"_50kHz", missing_file[0], missing_file[1]+'.wav')
+            transcription_path = os.path.join(transcription_file_location, missing_file[0], "align", missing_file[1]+'.align')
+
+            text = ''
+            with open(transcription_path, 'r') as file:
+                for line in file.readlines()[1:-1]:
+                    line_split = line.split(' ')
+                    text += line_split[-1] + ' '
+
+            text = text.strip()
+            text += '\n'
+
+            phon_file_name = missing_file[0] + '_' + missing_file[1] + '.txt'
+            phon_write_location = os.path.join(phoneme_alignment_location, phon_file_name)
+            #print(text, audio_path, phon_write_location)
+
+            self.runProcess(text, audio_path, phon_write_location)
+
+            # #if (os.path.splitext(compressed_path)[0].split('\\')[-1] == 's1_50kHz'):
+            #     #print(compressed_path)
+            #     #print(os.path.splitext(compressed_path)[0].split('\\')[-1])
+
+            #     for speaker_path in glob.glob(os.path.join(compressed_path, '*')):
+
+            #         speaker_id = os.path.splitext(speaker_path)[0].split('\\')[-1]
+
+            #         if (speaker_id not in speaker_list):
+            #             print("speaker: " + speaker_id)
+            #             n = 1
+
+            #             for audio_path in glob.glob(os.path.join(speaker_path, '*')):
+            #                 print(str(n) + "/1000")
+
+            #                 #print(audio_path)
+            #                 audio_name = os.path.splitext(audio_path)[0].split('\\')[-1]
+            #                 transcription_path = os.path.join(transcription_file_location, speaker_id, 'align', audio_name)
+            #                 transcription_path += '.align'
+
+            #                 # the following creates a single line containing the transcription of the audio file for the general webMAUS application
+            #                 text = ''
+            #                 with open(transcription_path, 'r') as file:
+            #                     for line in file.readlines()[1:-1]:
+            #                         line_split = line.split(' ')
+            #                         text += line_split[-1] + ' '
+
+            #                 text = text.strip()
+            #                 text += '\n'
+
+            #                 #print(text)
+            #                 phon_file_name = speaker_id + '_' + audio_name + '.txt'
+            #                 phon_write_location = os.path.join(phoneme_alignment_location, phon_file_name)
+
+wm = webMaus(max_workers=4)
+missing_files = wm.find_missing_alignments("H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\transcription", 
+                                            "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\datasets\\phoneme-alignment")
+print(missing_files)
+# wm.specificReadFiles("H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\audio", 
+#                      "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\transcription", 
+#                      "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\datasets\\phoneme-alignment",
+#                      missing_files)
+# wm.readFiles("H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\audio", 
+#              "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\transcription", 
+#              "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\datasets\\phoneme-alignment")
 #wm.runProcess("bin blue at f two now\n", "H:/UNI/CS/Year3/Project/Dataset/GRID/audio/s1_50kHz\s1/bbaf2n.wav")
