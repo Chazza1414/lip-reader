@@ -1,4 +1,4 @@
-from common.constants import NUM_PHONEMES, VIDEO_FRAME_NUM, MAX_VIDEO_LENGTH, PHONEME_LIST
+from lipreader.common.constants import NUM_PHONEMES, VIDEO_FRAME_NUM, MAX_VIDEO_LENGTH, PHONEME_LIST
 import numpy as np
 
 class Align():

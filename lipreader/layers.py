@@ -1,5 +1,5 @@
 from keras.layers import Lambda
-from loss import ctc_lambda_func
+from lipreader.loss import ctc_lambda_func
 
 # CTC Layer implementation using Lambda layer
 # (because Keras doesn't support extra prams on loss function)

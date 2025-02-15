@@ -6,11 +6,11 @@ from keras.layers import GRU
 from keras.layers import BatchNormalization
 from keras.layers import Input
 from keras.models import Model
-from layers import CTC
+from lipreader.layers import CTC
 from keras import backend as K
 import numpy as np
 import tensorflow as tf
-from common.constants import VIDEO_FRAME_NUM, NUM_PHONEMES
+from lipreader.common.constants import VIDEO_FRAME_NUM, NUM_PHONEMES
 
 class LipReader(Model):
     def __init__(self, img_c=3, img_w=100, img_h=50, frames_n=VIDEO_FRAME_NUM, absolute_max_string_len=32, output_size=NUM_PHONEMES):

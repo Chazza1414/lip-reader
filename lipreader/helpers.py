@@ -1,3 +1,5 @@
+import threading
+
 def text_to_labels(text):
     ret = []
     for char in text:
@@ -19,11 +21,15 @@ def labels_to_text(labels):
 
 def get_list_safe(l, index, size):
     ret = l[index:index+size]
-    while size - len(ret) > 0:
-        ret += l[0:size - len(ret)]
-    return ret
+    size_diff = (len(l)-1) - (index + size)
 
-import threading
+    if (size_diff < 0):
+        ret += l[0:abs(size_diff)]
+
+    # ret = l[index:index+size]
+    # while size - len(ret) > 0:
+    #     ret += l[0:size - len(ret)]
+    return ret
 
 class threadsafe_iter:
     """Takes an iterator/generator and makes it thread-safe by
