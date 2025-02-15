@@ -1,12 +1,15 @@
-import numpy as np
+import cv2
 
-video = [[[1,2],
-          [3,4]],
-          [[5,6],
-          [7,8]],
-          [[9,10],
-          [11,12]],
-          [[13,14],
-          [15,16]]]
+video_path = "H:/UNI/CS/Year3/Project/Dataset/GRID/video/s1.mpg_6000.part1/s1/video/mpg_6000/bbaf2n.mpg"
+cap = cv2.VideoCapture(video_path)
 
-print(np.flip(video, axis=2))
+if not cap.isOpened():
+    print("Error: Could not open video file.")
+else:
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    print(f"FPS: {fps}")
+    print(f"Total Frames: {frame_count}")
+
+cap.release()
