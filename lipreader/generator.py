@@ -73,8 +73,8 @@ class Generator():
 
     # adds the video file path to an array with some fancy error handling
     def enumerate_videos(self, path):
-        print("enumerating vidoes")
-        print(path)
+        #print("enumerating vidoes")
+        #print(path)
         video_list = []
         for video_path in Path(path).glob('*'):
             try:
@@ -82,10 +82,10 @@ class Generator():
                     video = Video().from_path(video_path)
                     if K.image_data_format() == 'channels_first' and video.frames.shape != (self.img_c,VIDEO_FRAME_NUM,self.img_w,self.img_h):
                         print("Video "+str(video_path)+" has incorrect shape "+str(video.frames.shape)+", must be "+str((self.img_c,VIDEO_FRAME_NUM,self.img_w,self.img_h))+"")
-                        continue
+                        raise AttributeError
                     if K.image_data_format() != 'channels_first' and video.frames.shape != (VIDEO_FRAME_NUM,self.img_w,self.img_h,self.img_c):
                         print("Video "+str(video_path)+" has incorrect shape "+str(video.frames.shape)+", must be "+str((VIDEO_FRAME_NUM,self.img_w,self.img_h,self.img_c))+"")
-                        continue
+                        raise AttributeError
                 else:
                     raise FileNotFoundError
             except AttributeError as err:
