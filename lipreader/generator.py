@@ -16,6 +16,7 @@ from lipreader.helpers import get_list_safe
 import multiprocessing
 from lipreader.helpers import threadsafe_generator
 from pathlib import Path
+import threading
 
 class Generator():
     # any paths passed should use '/'
@@ -50,8 +51,8 @@ class Generator():
         self.align_path     = Path(self.dataset_path) / 'phoneme-alignment'
 
         # Set steps to dataset size if not set
-        print("train path")
-        print(self.train_path)
+        #print("train path")
+        #print(self.train_path)
         self.train_list = self.enumerate_videos(self.train_path)
         self.validate_list   = self.enumerate_videos(self.validate_path)
         self.align_hash = self.enumerate_phoneme_alignment(self.train_list + self.validate_list)
@@ -92,17 +93,20 @@ class Generator():
                 raise err
             except FileNotFoundError as err:
                 raise err
-            except:
+            except Exception as e:
                 print("Error loading video: "+ str(video_path))
+                print(e)
                 continue
-            video_list.append(video_path)
+            video_list.append(str(video_path))
         return video_list
     
     def enumerate_phoneme_alignment(self, video_list):
         phoneme_alignment_dict = {}
 
         for video_path in video_list:
-            video_id = os.path.splitext(video_path)[0].split('/')[-1]
+            
+            video_id = os.path.splitext(video_path)[0].split('\\')[-1]
+            #print(self.align_path, video_id, video_path)
             phoneme_alignment_path = os.path.join(self.align_path, video_id)+".txt"
             phoneme_alignment_dict[video_id] = Align(phoneme_alignment_path)
 
@@ -118,7 +122,7 @@ class Generator():
             video_list = self.validate_list
 
         print("getting batch")
-        print(video_list, index, size)
+        #print(video_list, index, size)
 
         X_data_path = get_list_safe(video_list, index, size)
         X_data = []
@@ -130,7 +134,7 @@ class Generator():
         for path in X_data_path:
             #print(path)
             video = Video().from_path(path)
-            align = self.get_alignment(path.split('/')[-1])
+            align = self.get_alignment(path.split('\\')[-1].split(".")[0])
             
             # if self.curriculum is not None:
             #     video, align, video_unpadded_length = self.curriculum.apply(video, align)
@@ -191,7 +195,8 @@ class Generator():
 
             ret = self.get_batch(cur_train_index, self.minibatch_size, train=True)
             print("yielding")
-            print(ret)
+            #print(ret)
+            print(ret[0].shape)
             yield ret
 
     def next_val(self):
@@ -207,3 +212,15 @@ class Generator():
 
             ret = self.get_batch(cur_val_index, self.minibatch_size, train=False)
             yield ret
+
+class LockedIterator(object):
+    def __init__(self, it):
+        self.lock = threading.Lock()
+        self.it = iter(it)
+
+    def __iter__(self): 
+        return self
+
+    def __next__(self):
+        with self.lock:
+            return self.it.__next__()
