@@ -13,7 +13,7 @@ import skvideo.io
 #from scipy.misc import imresize
 from scipy import ndimage
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from lipreader.common.constants import VIDEO_PATH, DATASET_PATH, VALIDATION_FRACTION, IMAGE_HEIGHT, IMAGE_WIDTH, VIDEO_FRAME_NUM, MAX_NUM_VIDEOS
+from lipreader.common.constants import VIDEO_PATH, DATASET_PATH, VALIDATION_FRACTION, IMAGE_HEIGHT, IMAGE_WIDTH, VIDEO_FRAME_NUM, MAX_NUM_VIDEOS, LIPS_PATH
 
 '''
 Usage: 
@@ -79,49 +79,47 @@ def identify_face(path):
             frame_count += 1
     return lip_frames
 
-def prepare_videos(max_num_videos):
+def prepare_videos(input_video_location, output_dataset_location,max_num_videos):
     validation_number = int(VALIDATION_FRACTION * int(max_num_videos))
     n = 0
-    for compressed_path in [d for d in Path(VIDEO_PATH).glob('*')]:
-    #for compressed_path in glob.glob(os.path.join(VIDEO_PATH, '*')):
-        print(os.path.splitext(compressed_path)[0].split('\\')[-1])
-        for speaker_path in Path(compressed_path).glob('*'):
-            speaker_id = os.path.splitext(speaker_path)[0].split('\\')[-1]
+    for video_path in Path(input_video_location).glob('*'):
 
-            for video_path1 in Path(speaker_path).glob('*'):
-                for video_path2 in Path(video_path1).glob('*'):
-                    for video_path3 in Path(video_path2).glob('*'):
+        speaker_id = os.path.splitext(video_path)[0].split('\\')[-1].split("_")[0]
 
-                        video_name = os.path.splitext(video_path3)[0].split('\\')[-1]
-                        # does this include the extension - no
+        video_name = os.path.splitext(video_path)[0].split('\\')[-1].split("_")[1]
+        
+        validate_link_name = Path(output_dataset_location) / 'validate' / (speaker_id + "_" + video_name + '.mpg')
+        train_link_name = Path(output_dataset_location) / 'train' / (speaker_id + "_" + video_name + '.mpg')
+        # does this include the extension - no
 
-                        # print(video_path3, os.path.join(DATASET_PATH, 'validate', speaker_id + "_" + video_name))
-                        # print(speaker_id)
-                        #print()
-                        # link_name = Path(DATASET_PATH) / 'validate' / (speaker_id + "_" + video_name + '.mpg')
-                        # print(link_name)
+        # print(video_path3, os.path.join(DATASET_PATH, 'validate', speaker_id + "_" + video_name))
+        # print(speaker_id)
+        #print()
+        # link_name = Path(DATASET_PATH) / 'validate' / (speaker_id + "_" + video_name + '.mpg')
+        # print(link_name)
 
-                        validate_link_name = Path(DATASET_PATH) / 'validate' / (speaker_id + "_" + video_name + '.mpg')
-                        train_link_name = Path(DATASET_PATH) / 'train' / (speaker_id + "_" + video_name + '.mpg')
+        validate_link_name = Path(DATASET_PATH) / 'validate' / (speaker_id + "_" + video_name + '.mpg')
+        train_link_name = Path(DATASET_PATH) / 'train' / (speaker_id + "_" + video_name + '.mpg')
 
-                        if os.path.exists(validate_link_name):
-                            os.remove(validate_link_name)  # Remove existing link or file
-                        if os.path.exists(train_link_name):
-                            os.remove(train_link_name)  # Remove existing link or file
-                            
-                        try:
-                            if n < validation_number:
-                                os.symlink(video_path3, validate_link_name)
-                                # subprocess.check_output(
-                                #     "mklink {} {}".format(link_name, video_path3), shell=True)
-                            else:
-                                os.symlink(video_path3, train_link_name)
-                                # subprocess.check_output(
-                                #     "mklink {} {}".format(link_name, video_path3), shell=True)
-                        
-                        except Exception as error:
-                            raise(error)
-                        n += 1
+        if os.path.exists(validate_link_name):
+            os.remove(validate_link_name)  # Remove existing link or file
+        if os.path.exists(train_link_name):
+            os.remove(train_link_name)  # Remove existing link or file
+            
+        try:
+            print("creating link " + str(n))
+            if n < validation_number:
+                os.symlink(video_path, validate_link_name)
+                # subprocess.check_output(
+                #     "mklink {} {}".format(link_name, video_path3), shell=True)
+            else:
+                os.symlink(video_path, train_link_name)
+                # subprocess.check_output(
+                #     "mklink {} {}".format(link_name, video_path3), shell=True)
+        
+        except Exception as error:
+            raise(error)
+        n += 1
 
 def prepare_test_videos(input_video_location, output_dataset_location, max_num_videos):
     validation_number = int(VALIDATION_FRACTION * int(max_num_videos))
@@ -263,8 +261,8 @@ face_detector = dlib.get_frontal_face_detector()
 landmark_detector = dlib.shape_predictor("./training/predictors/shape_predictor_68_face_landmarks.dat")
 
 # prepare videos normally
-#prepare_videos(VIDEO_PATH, DATASET_PATH, MAX_NUM_VIDEOS)
+#prepare_videos(LIPS_PATH, DATASET_PATH, MAX_NUM_VIDEOS)
 
 # prepare test subset
 #prepare_videos("H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_video", "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_dataset", 10)
-prepare_test_videos("H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_video", "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_datasets", 10)
+prepare_test_videos("H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_video", "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_datasets", 11)

@@ -39,6 +39,7 @@ class Generator():
         self.process_train_index = -1
         self.process_val_index   = -1
         self.random_seed = 13
+        self.failed_videos = 0
     
     def build(self):
         # training video names should be of the form speakerid_filename.wav
@@ -81,6 +82,8 @@ class Generator():
             try:
                 if os.path.isfile(video_path):
                     video = Video().from_path(video_path)
+                    if video is None:
+                        raise Exception
                     if K.image_data_format() == 'channels_first' and video.frames.shape != (self.img_c,VIDEO_FRAME_NUM,self.img_w,self.img_h):
                         print("Video "+str(video_path)+" has incorrect shape "+str(video.frames.shape)+", must be "+str((self.img_c,VIDEO_FRAME_NUM,self.img_w,self.img_h))+"")
                         raise AttributeError
@@ -94,8 +97,10 @@ class Generator():
             except FileNotFoundError as err:
                 raise err
             except Exception as e:
-                print("Error loading video: "+ str(video_path))
-                print(e)
+                self.failed_videos += 1
+                # print("Error loading video: "+ str(video_path))
+                # print(e)
+                print(str(self.failed_videos))
                 continue
             video_list.append(str(video_path))
         return video_list
@@ -134,18 +139,11 @@ class Generator():
         for path in X_data_path:
             #print(path)
             video = Video().from_path(path)
+
             align = self.get_alignment(path.split('\\')[-1].split(".")[0])
-            
-            # if self.curriculum is not None:
-            #     video, align, video_unpadded_length = self.curriculum.apply(video, align)
 
             X_data.append(video.frames)
             Y_data.append(align.alignment_matrix)
-
-            # label_length.append(align.label_length) # CHANGED [A] -> A, CHECK!
-            # # input_length.append([video_unpadded_length - 2]) # 2 first frame discarded
-            # input_length.append(video.length) # Just use the video padded length to avoid CTC No path found error (v_len < a_len)
-            # source_str.append(align.sentence) # CHANGED [A] -> A, CHECK!
 
         # source_str = np.array(source_str)
         # label_length = np.array(label_length)
@@ -161,6 +159,7 @@ class Generator():
         #           }
         # inputs = {'the_input': X_data, 'the_labels': Y_data}
         # outputs = {'ctc': np.zeros([size])}  # dummy data for dummy loss function
+        #print(X_data.shape)
 
         # return (inputs, outputs)
         return (X_data, Y_data)
@@ -196,7 +195,7 @@ class Generator():
             ret = self.get_batch(cur_train_index, self.minibatch_size, train=True)
             print("yielding")
             #print(ret)
-            print(ret[0].shape)
+            #print(ret[0].shape)
             yield ret
 
     def next_val(self):

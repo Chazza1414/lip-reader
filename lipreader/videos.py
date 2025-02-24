@@ -3,7 +3,7 @@ import imageio.v3 as iio
 import numpy as np
 import dlib
 import keras.backend as K
-from lipreader.common.constants import IMAGE_HEIGHT, IMAGE_WIDTH
+from lipreader.common.constants import IMAGE_HEIGHT, IMAGE_WIDTH, VIDEO_FRAME_NUM
 
 class Video(object):
     def __init__(self):
@@ -15,12 +15,31 @@ class Video(object):
         #self.identify_face()
 
     def from_path(self, path):
-        self.frames = np.array(iio.imread(path, plugin='pyav'))
-        width = self.frames.shape[1]
-        height = self.frames.shape[2]
+        try:
+            self.frames = np.array(iio.imread(path, plugin='pyav'))
+            num_frames = self.frames.shape[0]
+            width = self.frames.shape[1]
+            height = self.frames.shape[2]
 
-        if (width == IMAGE_HEIGHT and height == IMAGE_WIDTH):
-            self.frames = np.swapaxes(self.frames, 1, 2)
+            if (num_frames < 70):
+                print("not enough frames " + str(num_frames))
+                raise Exception
+            
+            # if we are missing a few frames extend the silence
+            if (num_frames < VIDEO_FRAME_NUM):
+                num_frames_needed = VIDEO_FRAME_NUM - num_frames
+                silence_frame = self.frames[-1:]
+                repeated_silence = np.repeat(silence_frame, num_frames_needed, axis=0)
+
+                self.frames = np.concatenate([self.frames, repeated_silence], axis=0)
+            elif (num_frames > VIDEO_FRAME_NUM):
+                self.frames = self.frames[:VIDEO_FRAME_NUM]
+
+            if (width == IMAGE_HEIGHT and height == IMAGE_WIDTH):
+                self.frames = np.swapaxes(self.frames, 1, 2)
+        except Exception as error:
+            #print("Error loading video")
+            return None
 
         return self
 

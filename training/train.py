@@ -28,7 +28,7 @@ np.random.seed(55)
 # PREDICT_BEAM_WIDTH  = 200
 # PREDICT_DICTIONARY  = os.path.join(CURRENT_PATH,'..','..','common','dictionaries','grid.txt')
 
-def train(run_name, start_epoch, stop_epoch, img_c, img_w, img_h, frames_n, absolute_max_string_len, minibatch_size, dataset_path):
+def train(run_name, start_epoch, stop_epoch, img_c, img_w, img_h, frames_n, minibatch_size, dataset_path):
     #curriculum = Curriculum(curriculum_rules)
     lipreader_generator = Generator(minibatch_size=minibatch_size,
                                 img_c=img_c, img_w=img_w, img_h=img_h, frames_n=frames_n,
@@ -79,4 +79,5 @@ if __name__ == '__main__':
     # original
     #train(run_name, 0, 5000, 3, 100, 50, 75, 32, 50)
     # 1
-    train(run_name, 0, 1, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 32, 1, "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_datasets")
+    #train(run_name, 0, 1, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 1, "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_datasets")
+    train(run_name, 0, 4, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 8, "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\datasets")

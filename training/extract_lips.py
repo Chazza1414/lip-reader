@@ -29,8 +29,8 @@ create a symlink from the video to the dataset folder
 renaming the file to be 's[speaker_number]_[video_name]'
 '''
 
-face_detector = dlib.get_frontal_face_detector()
-landmark_detector = dlib.shape_predictor("./training/predictors/shape_predictor_68_face_landmarks.dat")
+# face_detector = dlib.get_frontal_face_detector()
+# landmark_detector = dlib.shape_predictor("./training/predictors/shape_predictor_68_face_landmarks.dat")
 
 
 
@@ -47,8 +47,13 @@ class LipExtractor():
             self.api_counter += 1
             print("Calls: " + str(self.api_counter))
 
-    def extract_lips(self, video_path, lip_vid_name):
-        frames = self.get_video_frames(str(video_path))
+    def extract_lips(self, video_path, lip_vid_name, use_CV=False):
+        if use_CV:
+            frames = self.get_video_frames_CV(str(video_path))
+        else:
+            frames = self.get_video_frames(str(video_path))
+
+        print(len(frames))
 
         lip_frames = self.get_frames_mouth(frames)
 
@@ -135,12 +140,15 @@ class LipExtractor():
         mouth_frames = []
         #print("starting detection")
         for frame in frames:
-            dets = self.face_detector(frame, 1)
+            dets = self.face_detector(frame)
             shape = None
+            #print(dets)
             for k, d in enumerate(dets):
+                
                 shape = self.landmark_detector(frame, d)
                 i = -1
             if shape is None: # Detector doesn't detect face, just return as is
+                print("shape of none")
                 return frames
             mouth_points = []
             for part in shape.parts():
@@ -160,11 +168,28 @@ class LipExtractor():
             mouth_crop_image = frame[mouth_t:mouth_b, mouth_l:mouth_r]
 
             mouth_frames.append(mouth_crop_image)
+
         return mouth_frames
+
+    def get_video_frames_CV(self, path):
+        cap = cv.VideoCapture(path)
+
+        frames = []
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+            frames.append(frame_gray)
+
+        cap.release()
+
+        return frames
 
     def get_video_frames(self, path):
         videogen = skvideo.io.vreader(path)
         frames = np.array([cv.cvtColor(frame, cv.COLOR_RGB2GRAY) for frame in videogen])
+        #print(frames.shape, frames.size)
         return frames
 
     def write_video(self, frames, location):
@@ -176,6 +201,7 @@ class LipExtractor():
 
         for frame in frames:
             out.write(cv.cvtColor(frame, cv.COLOR_GRAY2BGR))  # Write frame to video
+            #out.write(frame)
 
         out.release()
 
@@ -274,6 +300,16 @@ paths = ["H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\gray_lips\\s1_bbizzn.mp4",
 "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\gray_lips\\s28_pbif6a.mp4",
 "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\gray_lips\\s28_sbwf1p.mp4",
 "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\gray_lips\\s28_sbwf2a.mp4",]
-lipEx.prepare_specific_videos(paths)
+
+#input_path = "H:\\UNI\\CS\\Year3\\Project\\lip-reader\\video-input\\AV_Clip_Weather.mp4"
+#input_path = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\video\\s7.mpg_6000.part1\\s7\\video\\mpg_6000\\bbae6n.mpg"
+#input_path = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\gray_lips\\s1_bbizzn.mp4"
+
+# input_path = "H:\\UNI\\CS\\Year3\\Project\\lip-reader\\video-input\\AV_Weather2.mp4"
+input_path = "H:\\UNI\\CS\\Year3\\Project\\lip-reader\\video-input\\AV_Weather4.mp4"
+
+#lipEx.prepare_specific_videos(paths)
+
+lipEx.extract_lips(input_path, "H:\\UNI\\CS\\Year3\\Project\\lip-reader\\video-input\\weather_lips3.mp4", use_CV=True)
 
 cv.destroyAllWindows()

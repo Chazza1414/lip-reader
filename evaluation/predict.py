@@ -102,7 +102,7 @@ class Predictor():
                     continue
                 video_list.append(str(video_path))
             return video_list
-
+    
     def predict(self):
         # testing_model = LipReader(img_c=self.img_c, img_w=self.img_w, img_h=self.img_h, frames_n=self.frames_n, output_size=NUM_PHONEMES)
         
@@ -120,6 +120,12 @@ class Predictor():
         for path in X_data_path:
             print(path)
             video = Video().from_path(path)
+
+            if video.frames.shape[0] < VIDEO_FRAME_NUM:
+                num_frames_needed = VIDEO_FRAME_NUM - video.frames.shape[0]
+                silence_frame = video.frames[-1:]
+                repeated_silence = np.repeat(silence_frame, num_frames_needed, axis=0)
+                video.frames = np.concatenate([video.frames, repeated_silence], axis=0)
         
             X_data.append(video.frames)
 
@@ -135,8 +141,10 @@ class Predictor():
         # print(predictions.shape)
         # print(np.sum(predictions, axis=1))
 
-model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-10-11-55'
-test_set_path = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_datasets\\validate"
+# model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-10-11-55'
+#model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-12-46-03'
+model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-13-41-32'
+test_set_path = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\datasets\\evaluate"
 
 predictor = Predictor(test_set_path, model_file_name, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM)
 predictor.predict()
