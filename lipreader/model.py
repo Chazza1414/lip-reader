@@ -13,7 +13,7 @@ import tensorflow as tf
 from lipreader.common.constants import VIDEO_FRAME_NUM, NUM_PHONEMES, IMAGE_WIDTH, IMAGE_HEIGHT
 
 class LipReader():
-    def __init__(self, img_c=3, img_w=100, img_h=50, frames_n=VIDEO_FRAME_NUM, absolute_max_string_len=32, output_size=NUM_PHONEMES):
+    def __init__(self, img_c=3, img_w=100, img_h=50, frames_n=VIDEO_FRAME_NUM, output_size=NUM_PHONEMES):
         #super().__init__()
         self.img_c = img_c
         self.img_w = img_w

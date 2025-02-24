@@ -13,4 +13,5 @@ MAX_NUM_VIDEOS = 33000
 # * is silence
 PHONEME_LIST = ['b', 'I', 'n', 'l', 'u', '@', 't', 'i', 'eI', 'aU', 'aI', 's', 'w', 'V', 'g', 'e', 'z', 
                 'I@', 'r', '@U', 'p', 'T', 'f', 'O', 'v', 'k', '{', 'tS', 'j', 'U', 'dZ', 'd', 'A', 'D', 'm', '*']
-NUM_PHONEMES = len(PHONEME_LIST)
+NUM_PHONEMES = len(PHONEME_LIST) # 36
+MODEL_SAVE_LOCATION = "H:/UNI/CS/Year3/Project/ModelSaves"

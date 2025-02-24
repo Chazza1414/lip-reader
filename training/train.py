@@ -5,7 +5,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from lipreader.generator import Generator, LockedIterator
-from lipreader.common.constants import IMAGE_HEIGHT, IMAGE_WIDTH, VIDEO_FRAME_NUM
+from lipreader.common.constants import IMAGE_HEIGHT, IMAGE_WIDTH, VIDEO_FRAME_NUM, MODEL_SAVE_LOCATION, IMAGE_CHANNELS
 #from lipnet.lipreading.callbacks import Statistics, Visualize
 #from lipnet.lipreading.curriculums import Curriculum
 #from lipnet.core.decoders import Decoder
@@ -14,6 +14,7 @@ from lipreader.spell import Spell
 from lipreader.model import LipReader
 import numpy as np
 import datetime
+from pathlib import Path
 
 
 np.random.seed(55)
@@ -33,8 +34,7 @@ def train(run_name, start_epoch, stop_epoch, img_c, img_w, img_h, frames_n, abso
                                 img_c=img_c, img_w=img_w, img_h=img_h, frames_n=frames_n,
                                 start_epoch=start_epoch, dataset_path=dataset_path).build()
 
-    lipreader = LipReader(img_c=img_c, img_w=img_w, img_h=img_h, frames_n=frames_n,
-                            absolute_max_string_len=absolute_max_string_len, output_size=lipreader_generator.output_size)
+    lipreader = LipReader(img_c=img_c, img_w=img_w, img_h=img_h, frames_n=frames_n, output_size=lipreader_generator.output_size)
     lipreader.summary()
 
     adam = Adam(learning_rate=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
@@ -69,10 +69,14 @@ def train(run_name, start_epoch, stop_epoch, img_c, img_w, img_h, frames_n, abso
                         verbose=1,
                         max_queue_size=5,
                         workers=2)
+    print("finished training " + str(run_name))
+    #  to get rid of the warning from absl, save fiel as .h5
+    lipreader.model.save(Path(MODEL_SAVE_LOCATION) / run_name)
+    #lipreader.model.save_weights(Path(MODEL_SAVE_LOCATION) / run_name)
 
 if __name__ == '__main__':
-    run_name = datetime.datetime.now().strftime('%Y:%m:%d:%H:%M:%S')
+    run_name = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     # original
     #train(run_name, 0, 5000, 3, 100, 50, 75, 32, 50)
     # 1
-    train(run_name, 0, 1, 3, IMAGE_WIDTH, IMAGE_WIDTH, VIDEO_FRAME_NUM, 32, 1, "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_datasets")
+    train(run_name, 0, 1, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 32, 1, "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_datasets")
