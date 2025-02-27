@@ -61,7 +61,7 @@ class LipReader():
 
         # transforms RNN output to character activations:
         self.dense1 = Dense(self.output_size, kernel_initializer='he_normal', name='dense1')(self.gru_2)
-
+        #self.y_pred = self.dense1
         self.y_pred = Activation('softmax', name='softmax')(self.dense1)
 
         #self.labels = Input(name='the_labels', shape=[self.absolute_max_string_len], dtype='float32')

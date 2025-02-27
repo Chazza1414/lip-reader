@@ -31,20 +31,28 @@ from lipreader.videos import Video
 # frames = video.frames[:60]
 # #frames = frames
 # print(frames.shape)
-input_path = "H:\\UNI\\CS\\Year3\\Project\\lip-reader\\video-input\\AV_Clip_Weather.mp4"
-cap = cv2.VideoCapture(input_path)
+# input_path = "H:\\UNI\\CS\\Year3\\Project\\lip-reader\\video-input\\AV_Clip_Weather.mp4"
+# cap = cv2.VideoCapture(input_path)
 
-if not cap.isOpened():
-    print("Error: Could not open video.")
+# if not cap.isOpened():
+#     print("Error: Could not open video.")
 
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
-        break
-    print(frame.shape) 
+# while cap.isOpened():
+#     ret, frame = cap.read()
+#     if not ret:
+#         break
+#     print(frame.shape) 
 
-cap.release()
-cv2.destroyAllWindows()
+# cap.release()
+# cv2.destroyAllWindows()
+
+vid = np.zeros((1,2,3,4))
+vid = np.arange(1, 10)
+print(vid)
+vid = np.repeat(vid, 2, axis=0)
+print(vid.shape)
+print(vid)
+#vid = np.repeat
 
 
 

@@ -10,7 +10,7 @@ import os
 import glob
 from keras import backend as K
 from lipreader.common.constants import IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_CHANNELS, DATASET_PATH, VIDEO_FRAME_NUM, NUM_PHONEMES
-from lipreader.videos import Video
+from lipreader.videos import Video, VideoHelper
 from lipreader.align import Align
 from lipreader.helpers import get_list_safe
 import multiprocessing
@@ -20,7 +20,7 @@ import threading
 
 class Generator():
     # any paths passed should use '/'
-    def __init__(self, minibatch_size, dataset_path=DATASET_PATH, steps_per_epoch=None, **kwargs):
+    def __init__(self, minibatch_size, dataset_path=DATASET_PATH, steps_per_epoch=None):
         self.dataset_path = dataset_path
         self.minibatch_size = minibatch_size
         self.steps_per_epoch = steps_per_epoch
@@ -30,36 +30,28 @@ class Generator():
         self.output_size = NUM_PHONEMES
         self.cur_train_index = multiprocessing.Value('i', 0)
         self.cur_val_index   = multiprocessing.Value('i', 0)
+        self.cur_eval_index   = multiprocessing.Value('i', 0)
         self.train_list_lock = multiprocessing.Lock()
-        self.steps_per_epoch     = kwargs.get('steps_per_epoch', None)
-        self.validation_steps    = kwargs.get('validation_steps', None)
-        self.process_epoch       = -1
+        self.steps_per_epoch     = steps_per_epoch
         self.shared_train_epoch  = multiprocessing.Value('i', -1)
         self.process_train_epoch = -1
-        self.process_train_index = -1
-        self.process_val_index   = -1
         self.random_seed = 13
         self.failed_videos = 0
     
     def build(self):
-        # training video names should be of the form speakerid_filename.wav
-        # self.train_path     = os.path.join(self.dataset_path, 'train')
-        # self.validate_path       = os.path.join(self.dataset_path, 'validate')
-        # self.align_path     = os.path.join(self.dataset_path, 'phoneme-alignment')
 
-        self.train_path     = Path(self.dataset_path) / 'train'
-        self.validate_path       = Path(self.dataset_path) / 'validate'
-        self.align_path     = Path(self.dataset_path) / 'phoneme-alignment'
+        self.train_path = Path(self.dataset_path) / 'train'
+        self.validate_path = Path(self.dataset_path) / 'validate'
+        self.evaluate_path = Path(self.dataset_path) / 'evaluate'
+        self.align_path = Path(self.dataset_path) / 'phoneme-alignment'
 
-        # Set steps to dataset size if not set
-        #print("train path")
-        #print(self.train_path)
-        self.train_list = self.enumerate_videos(self.train_path)
-        self.validate_list   = self.enumerate_videos(self.validate_path)
-        self.align_hash = self.enumerate_phoneme_alignment(self.train_list + self.validate_list)
+        self.video_helper = VideoHelper()
+        self.train_list = self.video_helper.enumerate_videos(self.train_path)
+        self.validate_list   = self.video_helper.enumerate_videos(self.validate_path)
+        self.evaluate_list = self.video_helper.enumerate_videos(self.evaluate_path)
+        self.align_hash = self.enumerate_phoneme_alignment(self.train_list + self.validate_list + self.evaluate_list)
 
         self.steps_per_epoch  = self.default_training_steps if self.steps_per_epoch is None else self.steps_per_epoch
-        self.validation_steps = self.default_validation_steps if self.validation_steps is None else self.validation_steps
 
         np.random.shuffle(self.train_list)
 
@@ -72,38 +64,6 @@ class Generator():
     @property
     def default_validation_steps(self):
         return len(self.validate_list) / self.minibatch_size
-
-    # adds the video file path to an array with some fancy error handling
-    def enumerate_videos(self, path):
-        #print("enumerating vidoes")
-        #print(path)
-        video_list = []
-        for video_path in Path(path).glob('*'):
-            try:
-                if os.path.isfile(video_path):
-                    video = Video().from_path(video_path)
-                    if video is None:
-                        raise Exception
-                    if K.image_data_format() == 'channels_first' and video.frames.shape != (self.img_c,VIDEO_FRAME_NUM,self.img_w,self.img_h):
-                        print("Video "+str(video_path)+" has incorrect shape "+str(video.frames.shape)+", must be "+str((self.img_c,VIDEO_FRAME_NUM,self.img_w,self.img_h))+"")
-                        raise AttributeError
-                    if K.image_data_format() != 'channels_first' and video.frames.shape != (VIDEO_FRAME_NUM,self.img_w,self.img_h,self.img_c):
-                        print("Video "+str(video_path)+" has incorrect shape "+str(video.frames.shape)+", must be "+str((VIDEO_FRAME_NUM,self.img_w,self.img_h,self.img_c))+"")
-                        raise AttributeError
-                else:
-                    raise FileNotFoundError
-            except AttributeError as err:
-                raise err
-            except FileNotFoundError as err:
-                raise err
-            except Exception as e:
-                self.failed_videos += 1
-                # print("Error loading video: "+ str(video_path))
-                # print(e)
-                print(str(self.failed_videos))
-                continue
-            video_list.append(str(video_path))
-        return video_list
     
     def enumerate_phoneme_alignment(self, video_list):
         phoneme_alignment_dict = {}
@@ -120,21 +80,19 @@ class Generator():
     def get_alignment(self, id):
         return self.align_hash[id]
     
-    def get_batch(self, index, size, train):
-        if train:
+    def get_batch(self, index, size, set_type):
+        if set_type == 'train':
             video_list = self.train_list
-        else:
+        elif set_type == 'validate':
             video_list = self.validate_list
+        else:
+            video_list = self.evaluate_list
 
-        print("getting batch")
-        #print(video_list, index, size)
+        #print(video_list)
 
         X_data_path = get_list_safe(video_list, index, size)
         X_data = []
         Y_data = []
-        label_length = []
-        input_length = []
-        source_str = []
         
         for path in X_data_path:
             #print(path)
@@ -145,23 +103,11 @@ class Generator():
             X_data.append(video.frames)
             Y_data.append(align.alignment_matrix)
 
-        # source_str = np.array(source_str)
-        # label_length = np.array(label_length)
-        # input_length = np.array(input_length)
         Y_data = np.array(Y_data)
         X_data = np.array(X_data).astype(np.float32) / 255 # Normalize image data to [0,1], TODO: mean normalization over training data
 
-        # inputs = {'the_input': X_data,
-        #           'the_labels': Y_data,
-        #           'input_length': input_length,
-        #           'label_length': label_length,
-        #           'source_str': source_str  # used for visualization only
-        #           }
-        # inputs = {'the_input': X_data, 'the_labels': Y_data}
-        # outputs = {'ctc': np.zeros([size])}  # dummy data for dummy loss function
-        #print(X_data.shape)
+        print(X_data.shape)
 
-        # return (inputs, outputs)
         return (X_data, Y_data)
     
     def next_train(self):
@@ -189,16 +135,10 @@ class Generator():
                     with self.train_list_lock:
                         r.shuffle(self.train_list) # Catch up
 
-            # if self.curriculum is not None and self.curriculum.epoch != self.process_train_epoch:
-            #     self.update_curriculum(self.process_train_epoch, train=True)
-
-            ret = self.get_batch(cur_train_index, self.minibatch_size, train=True)
-            print("yielding")
-            #print(ret)
-            #print(ret[0].shape)
+            ret = self.get_batch(cur_train_index, self.minibatch_size, set_type='train')
             yield ret
 
-    def next_val(self):
+    def next_validate(self):
         while 1:
             with self.cur_val_index.get_lock():
                 cur_val_index = self.cur_val_index.value
@@ -206,10 +146,18 @@ class Generator():
                 if self.cur_val_index.value >= len(self.validate_list):
                     self.cur_val_index.value = self.cur_val_index.value % self.minibatch_size
 
-            # if self.curriculum is not None and self.curriculum.epoch != self.process_epoch:
-            #     self.update_curriculum(self.process_epoch, train=False)
+            ret = self.get_batch(cur_val_index, self.minibatch_size, set_type='validate')
+            yield ret
 
-            ret = self.get_batch(cur_val_index, self.minibatch_size, train=False)
+    def next_evaluate(self):
+        while 1:
+            with self.cur_eval_index.get_lock():
+                cur_eval_index = self.cur_eval_index.value
+                self.cur_eval_index.value += self.minibatch_size
+                if self.cur_eval_index.value >= len(self.evaluate_list):
+                    self.cur_eval_index.value = self.cur_eval_index.value % self.minibatch_size
+
+            ret = self.get_batch(cur_eval_index, self.minibatch_size, set_type='evaluate')
             yield ret
 
 class LockedIterator(object):

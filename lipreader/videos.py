@@ -3,7 +3,9 @@ import imageio.v3 as iio
 import numpy as np
 import dlib
 import keras.backend as K
-from lipreader.common.constants import IMAGE_HEIGHT, IMAGE_WIDTH, VIDEO_FRAME_NUM
+from lipreader.common.constants import IMAGE_HEIGHT, IMAGE_WIDTH, VIDEO_FRAME_NUM, IMAGE_CHANNELS
+from pathlib import Path
+import os
 
 class Video(object):
     def __init__(self):
@@ -21,10 +23,12 @@ class Video(object):
             width = self.frames.shape[1]
             height = self.frames.shape[2]
 
-            if (num_frames < 70):
+            if (num_frames < 30):
                 print("not enough frames " + str(num_frames))
                 raise Exception
-            
+            # if the frame rate is very low double the length
+            if (num_frames*2 < VIDEO_FRAME_NUM):
+                self.frames = np.repeat(self.frames, 2, axis=0)
             # if we are missing a few frames extend the silence
             if (num_frames < VIDEO_FRAME_NUM):
                 num_frames_needed = VIDEO_FRAME_NUM - num_frames
@@ -47,48 +51,38 @@ class Video(object):
         if (self.frames != []):
             self.frames = np.flip(self.frames, axis=2)
 
-    # def identify_face(self):
-    #     capture = cv.VideoCapture(self.path)
+class VideoHelper():
+    def __init__(self):
+        self.img_c = IMAGE_CHANNELS
+        self.frame_num = VIDEO_FRAME_NUM
+        self.img_w = IMAGE_WIDTH
+        self.img_h = IMAGE_HEIGHT
 
-    #     if not capture.isOpened():
-    #         print("Error: Could not open video.")
-    #         raise ValueError
-        
-    #     while capture.isOpened():
-
-    #         ret, frame = capture.read()
-    #         frame = cv.cvtColor(frame, cv.COLOR_RGB2GRAY)
-    #         #frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-    #         #frame = dlib.load_rgb_image(frame)
-    #         #frame = cv.cvtColor(frame, cv.COLOR_RGB2BGR)
-
-    #         if not ret:
-    #             print("Can't receive frame")
-    #             raise ValueError
-
-    #         dets = self.face_detector(frame)
-
-    #         for i, d in enumerate(dets):
-    #             face = self.landmark_detector(frame, d)
-
-    #             section = face.part(51).y - face.part(33).y
-    #             # draw_rectangle = dlib.rectangle(left=face.part(33).x - (section * 3), 
-    #             #                                 top=face.part(33).y, 
-    #             #                                 right=face.part(33).x + (section * 3), 
-    #             #                                 bottom=face.part(33).y + (section * 3)) 
-    #             # win.add_overlay(draw_rectangle, dlib.rgb_pixel(0,0,255))
-
-    #             left = face.part(33).x - (section * 3)
-    #             right = face.part(33).x + (section * 3)
-    #             top = face.part(33).y
-    #             bottom = face.part(33).y + (section * 3)
-
-    #             if (K.image_data_format() == 'channels_last'):
-    #                 lips = frame[left:right, top:bottom]
-    #                 rescaled_lips = cv.resize(lips, (IMAGE_WIDTH, IMAGE_HEIGHT), interpolation=cv.INTER_LINEAR)
-    #                 rescaled_lips = rescaled_lips.swapaxes(0,1)
-    #                 #print(rescaled_lips.shape)
-    #                 self.lip_frames = np.append(self.lip_frames, [np.array(rescaled_lips)], axis=0)
-    #                 #print(np.array(frame).shape)
-
-#vid = Video("H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\video\\s1.mpg_6000.part1\\s1\\video\\mpg_6000\\bbaf2n.mpg")
+    def enumerate_videos(self, path):
+        video_list = []
+        for video_path in Path(path).glob('*'):
+            try:
+                if os.path.isfile(video_path):
+                    video = Video().from_path(video_path)
+                    if (video is not None):
+                        if K.image_data_format() == 'channels_first' and video.frames.shape != (self.img_c,self.frame_num,self.img_w,self.img_h):
+                            print("Video "+str(video_path)+" has incorrect shape "+str(video.frames.shape)+", must be "+str((self.img_c,self.frame_num,self.img_w,self.img_h))+"")
+                            raise AttributeError
+                        if K.image_data_format() != 'channels_first' and video.frames.shape != (self.frame_num,self.img_w,self.img_h,self.img_c):
+                            print("Video "+str(video_path)+" has incorrect shape "+str(video.frames.shape)+", must be "+str((self.frame_num,self.img_w,self.img_h,self.img_c))+"")
+                            raise AttributeError
+                    else:
+                        raise Exception
+                elif os.path.isdir(video_path):
+                    continue
+                else:
+                    raise FileNotFoundError
+            except AttributeError as err:
+                raise err
+            except FileNotFoundError as err:
+                raise err
+            except Exception as e:
+                print("Error loading video: "+ str(video_path))
+                continue
+            video_list.append(str(video_path))
+        return video_list
