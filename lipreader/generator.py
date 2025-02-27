@@ -106,7 +106,7 @@ class Generator():
         Y_data = np.array(Y_data)
         X_data = np.array(X_data).astype(np.float32) / 255 # Normalize image data to [0,1], TODO: mean normalization over training data
 
-        print(X_data.shape)
+        #print(X_data.shape)
 
         return (X_data, Y_data)
     

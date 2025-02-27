@@ -27,23 +27,28 @@ def train(run_name, stop_epoch, img_c, img_w, img_h, frames_n, minibatch_size, d
 
     lipreader.model.compile(optimizer=adam, loss=loss, metrics=[accuracy])
 
-    tensorboard = TensorBoard(log_dir=os.path.join(MODEL_LOG_LOCATION, run_name), histogram_freq=1, write_images=True, embeddings_freq=1)
+    tensorboard = TensorBoard(log_dir=os.path.join(MODEL_LOG_LOCATION, run_name), histogram_freq=1, write_images=True, embeddings_freq=1, 
+                              update_freq=10)
     
     print("training " + str(run_name))
-    lipreader.model.fit(x=LockedIterator(lipreader_generator.next_train()),
-                        steps_per_epoch=lipreader_generator.default_training_steps, epochs=stop_epoch,
-                        validation_data=LockedIterator(lipreader_generator.next_validate()), validation_steps=lipreader_generator.default_validation_steps,
-                        callbacks=[tensorboard],
-                        verbose=1,
-                        max_queue_size=5,
-                        workers=2)
+    lipreader.model.fit(
+        x=LockedIterator(lipreader_generator.next_train()),
+        steps_per_epoch=lipreader_generator.default_training_steps, epochs=stop_epoch,
+        validation_data=LockedIterator(lipreader_generator.next_validate()), validation_steps=lipreader_generator.default_validation_steps,
+        callbacks=[tensorboard],
+        verbose=1,
+        max_queue_size=5,
+        workers=2)
     
     #  to get rid of the warning from absl, save file as .h5
     lipreader.model.save(Path(MODEL_SAVE_LOCATION) / run_name)
 
     print("evaluating")
-    evaluation_loss, evaluation_accuracy = lipreader.model.evaluate(x=LockedIterator(lipreader_generator.next_evaluate()), 
-                                                                    verbose=1, callbacks=[tensorboard])
+    evaluation_loss, evaluation_accuracy = lipreader.model.evaluate(
+        x=LockedIterator(lipreader_generator.next_evaluate()), 
+        verbose=1, callbacks=[tensorboard],
+        max_queue_size=5,
+        workers=2)
     
     print(evaluation_loss)
     print(evaluation_accuracy)

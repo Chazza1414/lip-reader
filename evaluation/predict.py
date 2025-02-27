@@ -5,6 +5,7 @@ from keras.losses import MeanSquaredError
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from lipreader.align import Align
 from lipreader.model import LipReader
 from lipreader.spell import Spell
 from lipreader.decoders import Decoder
@@ -12,7 +13,7 @@ from lipreader.helpers import labels_to_text
 from lipreader.videos import Video, VideoHelper
 import tensorflow as tf
 import numpy as np
-from lipreader.common.constants import MODEL_SAVE_LOCATION, NUM_PHONEMES, VIDEO_FRAME_NUM, IMAGE_CHANNELS, IMAGE_HEIGHT, IMAGE_WIDTH, PHONEME_LIST
+from lipreader.common.constants import MODEL_SAVE_LOCATION, NUM_PHONEMES, VIDEO_FRAME_NUM, IMAGE_CHANNELS, IMAGE_HEIGHT, IMAGE_WIDTH, PHONEME_LIST, DATASET_PATH
 from pathlib import Path
 
 class Predictor():
@@ -23,32 +24,48 @@ class Predictor():
         self.img_w = IMAGE_WIDTH
         self.img_h = IMAGE_HEIGHT
         self.frames_n = VIDEO_FRAME_NUM
+        self.dataset_path = DATASET_PATH
+        self.align_path = Path(self.dataset_path) / 'phoneme-alignment'
     
     def predict(self):
         testing_model = models.load_model(self.model_file_name)
         videohelper = VideoHelper()
         X_data_path = videohelper.enumerate_videos(self.test_set_path)
+        
 
         #X_data_path = self.enumerate_videos(self.test_set_path)
         X_data = []
+        Y_data = []
         
         for path in X_data_path:
             print(path)
             video = Video().from_path(path)
 
+            video_id = os.path.splitext(path)[0].split('\\')[-1]
+            phoneme_alignment_path = os.path.join(self.align_path, video_id)+".txt"
+
             if (video is not None):
                 X_data.append(video.frames)
+                Y_data.append(Align(phoneme_alignment_path).alignment_matrix)
 
         X_data = np.array(X_data).astype(np.float32) / 255
 
-        predictions = testing_model.predict(X_data)[0]
-        #most_likely_phonemes = tf.nn.softmax(predictions)
-        #most_likely_phonemes = most_likely_phonemes.numpy()
-        #print(predictions)
-        most_likely_phonemes = np.argmax(predictions, axis=1)
+        predictions = testing_model.predict(X_data)
+
         phoneme_list = np.array(PHONEME_LIST)
-        print(most_likely_phonemes)
-        print(phoneme_list[most_likely_phonemes])
+        phonemes = np.array([])
+        for j in range(len(predictions)):
+            for i in range(len(predictions[j])):
+                most_common_indexes = np.argsort(predictions[j, i])[-3:][::-1]
+                #print(most_common_indexes)
+                actual_index = np.where(Y_data[j][i] == 1)[0]
+                print(str(phoneme_list[actual_index]) + " : " + str(phoneme_list[most_common_indexes]))
+            #phonemes = np.append(phonemes, (phoneme_list[np.argsort(pred)[-3:][::-1]]))
+        #print(phonemes)            
+        most_likely_phonemes = np.argmax(predictions, axis=1)
+        
+        #print(most_likely_phonemes)
+        #print(phoneme_list[most_likely_phonemes])
 
         # print(predictions)
         # print(predictions.shape)
@@ -57,8 +74,8 @@ class Predictor():
 # model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-10-11-55'
 #model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-12-46-03'
 #model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-13-41-32' #4 epoch
-model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-26-11-54-35'
-test_set_path = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\datasets\\evaluate"
+model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-27-14-35-16'
+test_set_path = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\datasets\\predict"
 
 predictor = Predictor(test_set_path, model_file_name)
 predictor.predict()
