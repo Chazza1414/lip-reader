@@ -11,6 +11,7 @@ from lipreader.spell import Spell
 from lipreader.decoders import Decoder
 from lipreader.helpers import labels_to_text
 from lipreader.videos import Video, VideoHelper
+from lipreader.common.phoneme_helper import PhonemeLibrary
 import tensorflow as tf
 import numpy as np
 from lipreader.common.constants import MODEL_SAVE_LOCATION, NUM_PHONEMES, VIDEO_FRAME_NUM, IMAGE_CHANNELS, IMAGE_HEIGHT, IMAGE_WIDTH, PHONEME_LIST, DATASET_PATH
@@ -26,6 +27,7 @@ class Predictor():
         self.frames_n = VIDEO_FRAME_NUM
         self.dataset_path = DATASET_PATH
         self.align_path = Path(self.dataset_path) / 'phoneme-alignment'
+        self.phon_helper = PhonemeLibrary()
     
     def predict(self):
         testing_model = models.load_model(self.model_file_name)
@@ -53,16 +55,52 @@ class Predictor():
         predictions = testing_model.predict(X_data)
 
         phoneme_list = np.array(PHONEME_LIST)
-        phonemes = np.array([])
+        started_talking = False
+        MIN_PROB = 0.1
+
         for j in range(len(predictions)):
             for i in range(len(predictions[j])):
+                out = np.array([])
                 most_common_indexes = np.argsort(predictions[j, i])[-3:][::-1]
-                #print(most_common_indexes)
+                soft_max_values = np.round(predictions[j, i, most_common_indexes], 2)
+
                 actual_index = np.where(Y_data[j][i] == 1)[0]
-                print(str(phoneme_list[actual_index]) + " : " + str(phoneme_list[most_common_indexes]))
+                #print(phoneme_list[actual_index])
+                #out = np.append(out, self.phon_helper.get_xsampa_to_arpa(phoneme_list[actual_index][0]))
+                print(self.phon_helper.get_xsampa_to_arpa(phoneme_list[actual_index][0]), end='\t')
+                
+                preds = phoneme_list[most_common_indexes]
+                #print(preds)
+                valid_preds = preds[soft_max_values > MIN_PROB]
+                soft_max_values = soft_max_values[soft_max_values > MIN_PROB]
+
+                if not started_talking and valid_preds[0] != '*':
+                    started_talking = True
+
+                if started_talking and '*' in valid_preds:
+                    index = np.where(valid_preds == '*')[0]
+                    valid_preds = np.delete(valid_preds, index)
+                    soft_max_values = np.delete(soft_max_values, index)
+
+
+                for k in range(len(valid_preds)):
+                    print(str(self.phon_helper.get_xsampa_to_arpa(valid_preds[k])) + " " + str(soft_max_values[k]), end='\t')
+                
+                print("\n")
+
+                #out = np.append(out, [(self.phon_helper.get_xsampa_to_arpa(valid_preds[i]), soft_max_values[i]) for i in range(len(valid_preds))])
+
+                #print(out)
+
+
+                #xsampa_phonemes = np.concatenate((phoneme_list[actual_index], phoneme_list[most_common_indexes]))
+                # arpa_phonemes = np.array(list(map(self.phon_helper.get_xsampa_to_arpa, xsampa_phonemes)))
+                # print(str(arpa_phonemes[0]) + "\t: " + 
+                #       str(arpa_phonemes[1]) + "\t" + str(soft_max_values[0]) + "\t" +
+                #       str(arpa_phonemes[2]) + "\t" + str(soft_max_values[1]) + "\t" +
+                #       str(arpa_phonemes[3]) + "\t" + str(soft_max_values[2]))
             #phonemes = np.append(phonemes, (phoneme_list[np.argsort(pred)[-3:][::-1]]))
-        #print(phonemes)            
-        most_likely_phonemes = np.argmax(predictions, axis=1)
+
         
         #print(most_likely_phonemes)
         #print(phoneme_list[most_likely_phonemes])
@@ -74,7 +112,7 @@ class Predictor():
 # model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-10-11-55'
 #model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-12-46-03'
 #model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-13-41-32' #4 epoch
-model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-27-14-35-16'
+model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-03-09-11-36-15'
 test_set_path = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\datasets\\predict"
 
 predictor = Predictor(test_set_path, model_file_name)

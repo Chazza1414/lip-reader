@@ -17,3 +17,4 @@ PHONEME_LIST = ['b', 'I', 'n', 'l', 'u', '@', 't', 'i', 'eI', 'aU', 'aI', 's', '
 NUM_PHONEMES = len(PHONEME_LIST) # 36
 MODEL_SAVE_LOCATION = "H:/UNI/CS/Year3/Project/ModelSaves"
 MODEL_LOG_LOCATION = "H:/UNI/CS/Year3/Project/ModelSaves/logs"
+DICT_FILE_PATH = "lipreader/dictionaries/cmudict-en-us.dict"

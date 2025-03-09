@@ -14,14 +14,14 @@ from pathlib import Path
 
 np.random.seed(55)
 
-def train(run_name, stop_epoch, img_c, img_w, img_h, frames_n, minibatch_size, dataset_path=DATASET_PATH):
+def train(run_name, stop_epoch, img_c, img_w, img_h, frames_n, minibatch_size, dataset_path):
 
     lipreader_generator = Generator(minibatch_size=minibatch_size, dataset_path=dataset_path).build()
 
     lipreader = LipReader(img_c=img_c, img_w=img_w, img_h=img_h, frames_n=frames_n, output_size=lipreader_generator.output_size)
     lipreader.summary()
 
-    adam = Adam(learning_rate=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
+    adam = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
     loss = CategoricalCrossentropy(reduction="sum_over_batch_size", name="CCE")
     accuracy = CategoricalAccuracy(name="categorical_accuracy")
 
@@ -44,16 +44,14 @@ def train(run_name, stop_epoch, img_c, img_w, img_h, frames_n, minibatch_size, d
     lipreader.model.save(Path(MODEL_SAVE_LOCATION) / run_name)
 
     print("evaluating")
-    evaluation_loss, evaluation_accuracy = lipreader.model.evaluate(
+    lipreader.model.evaluate(
         x=LockedIterator(lipreader_generator.next_evaluate()), 
         verbose=1, callbacks=[tensorboard],
         max_queue_size=5,
-        workers=2)
-    
-    print(evaluation_loss)
-    print(evaluation_accuracy)
+        workers=2,
+        steps=len(lipreader_generator.evaluate_list))
 
 if __name__ == '__main__':
     run_name = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    #train(run_name, 1, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 1, "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_datasets")
-    train(run_name, 4, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 8)
+    #train(run_name, 1, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 1, dataset_path="H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_datasets")
+    train(run_name, 4, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 16, dataset_path=DATASET_PATH)

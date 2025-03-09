@@ -9,7 +9,7 @@ import numpy as np
 import os
 import glob
 from keras import backend as K
-from lipreader.common.constants import IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_CHANNELS, DATASET_PATH, VIDEO_FRAME_NUM, NUM_PHONEMES
+from lipreader.common.constants import IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_CHANNELS, DATASET_PATH, VIDEO_FRAME_NUM, NUM_PHONEMES, IMAGE_FLIP_PROBABILITY
 from lipreader.videos import Video, VideoHelper
 from lipreader.align import Align
 from lipreader.helpers import get_list_safe
@@ -20,7 +20,7 @@ import threading
 
 class Generator():
     # any paths passed should use '/'
-    def __init__(self, minibatch_size, dataset_path=DATASET_PATH, steps_per_epoch=None):
+    def __init__(self, minibatch_size, dataset_path, steps_per_epoch=None):
         self.dataset_path = dataset_path
         self.minibatch_size = minibatch_size
         self.steps_per_epoch = steps_per_epoch
@@ -50,6 +50,8 @@ class Generator():
         self.validate_list   = self.video_helper.enumerate_videos(self.validate_path)
         self.evaluate_list = self.video_helper.enumerate_videos(self.evaluate_path)
         self.align_hash = self.enumerate_phoneme_alignment(self.train_list + self.validate_list + self.evaluate_list)
+
+        #print(len(self.evaluate_list))
 
         self.steps_per_epoch  = self.default_training_steps if self.steps_per_epoch is None else self.steps_per_epoch
 
@@ -100,11 +102,16 @@ class Generator():
 
             align = self.get_alignment(path.split('\\')[-1].split(".")[0])
 
-            X_data.append(video.frames)
-            Y_data.append(align.alignment_matrix)
+            if (IMAGE_FLIP_PROBABILITY > np.random.rand()):
+                video.flip_video()
+                X_data.append(video.frames)
+                Y_data.append(align.alignment_matrix)
+            else:
+                X_data.append(video.frames)
+                Y_data.append(align.alignment_matrix)
 
         Y_data = np.array(Y_data)
-        X_data = np.array(X_data).astype(np.float32) / 255 # Normalize image data to [0,1], TODO: mean normalization over training data
+        X_data = np.array(X_data).astype(np.float32) / 255 
 
         #print(X_data.shape)
 

@@ -48,8 +48,8 @@ class Video(object):
         return self
 
     def flip_video(self):
-        if (self.frames != []):
-            self.frames = np.flip(self.frames, axis=2)
+        if (self.frames.shape == (75, 100, 50, 3)):
+            self.frames = np.flip(self.frames, axis=1)
 
 class VideoHelper():
     def __init__(self):

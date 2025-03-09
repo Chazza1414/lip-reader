@@ -46,15 +46,46 @@ from lipreader.videos import Video
 # cap.release()
 # cv2.destroyAllWindows()
 
-vid = np.zeros((1,2,3,4))
-vid = np.arange(1, 10)
-print(vid)
-vid = np.repeat(vid, 2, axis=0)
-print(vid.shape)
-print(vid)
+# vid = np.zeros((1,2,3,4))
+# vid = np.arange(1, 10)
+# print(vid)
+# vid = np.repeat(vid, 2, axis=0)
+# print(vid.shape)
+# print(vid)
 #vid = np.repeat
 
+video = Video().from_path("H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\datasets\\train\\s5_bgaa3s.mpg")
+#vid_copy = np.copy(video.frames)
+video.flip_video()
+print(video.frames.shape)
+#print(video.frames / 255)
+#print(np.all(vid_copy == np.flip(video.frames, axis=1)))
+video.frames = np.swapaxes(video.frames, 1, 2)
 
+frame_height, frame_width = 50, 100
+fps=25
+
+delay = int(1000 / fps)  # Convert FPS to milliseconds per frame
+
+for frame in video.frames:
+    #corrected_frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+    cv2.imshow("Video Playback", frame)  # Show frame
+    if cv2.waitKey(delay) & 0xFF == ord('q'):  # Press 'q' to exit early
+        break
+
+cv2.destroyAllWindows()  # Close window when done
+
+# Define the codec and create VideoWriter object
+# fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Use 'mp4v' for MP4
+# out = cv2.VideoWriter("H:\\UNI\\CS\\Year3\\Project\\lip-reader\\video-input\\flipped.mp4", fourcc, fps, (frame_height, frame_width))
+
+# Write each frame
+# for frame in video.frames:
+    
+#     out.write(frame)
+
+# Release the writer
+# out.release()
 
 # vid = np.empty(shape=(75, 50, 100, 3))
 # vid = np.swapaxes(vid, 1, 2)
