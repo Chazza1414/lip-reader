@@ -5,16 +5,16 @@ import numpy as np
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import spectrogram, get_window, argrelextrema
 from phoneme_library import PhonemeLibrary
-import sounddevice as sd
+#import sounddevice as sd
 
 # Load the audio file
-file_path = '../GRID/s23_50kHz/s23/bbad1s.wav'  # Replace with your audio file path
+file_path = '../../dataset/s23_50kHz/s23/bbad1s.wav'  # Replace with your audio file path
 y, sr = librosa.load(file_path)
 
 y = gaussian_filter1d(y, sigma=4)
 times = np.linspace(start=0, stop=3, num=len(y))
 
-TRANS_FILE_NAME = '../GRID/s23/align/bbad1s.align'
+TRANS_FILE_NAME = '../../dataset/s23/align/bbad1s.align'
 PhonLib = PhonemeLibrary()
 transcription_array = PhonLib.create_transcription_array(TRANS_FILE_NAME, 25)
 

@@ -445,10 +445,10 @@ class VisualisePhonemes:
         self.time_labels = [pair[0] for pair in self.transcription_array]
         self.word_labels = [pair[2] for pair in self.transcription_array]
 
-#FILE_NAME = 'swwp2s_high.wav'
-FILE_NAME = '../GRID/s23_50kHz/s23/bbad1s.wav'
-#TRANS_FILE_NAME = 'swwp2s.align.txt'
-TRANS_FILE_NAME = '../GRID/s23/align/bbad1s.align'
+FILE_NAME = 'swwp2s_high.wav'
+#FILE_NAME = '../GRID/s23_50kHz/s23/bbad1s.wav'
+TRANS_FILE_NAME = 'swwp2s.align.txt'
+#TRANS_FILE_NAME = '../GRID/s23/align/bbad1s.align'
 FRAME_RATE = 25
 nfft = 128
 noverlap = nfft // 2
