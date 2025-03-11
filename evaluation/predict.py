@@ -70,11 +70,12 @@ class Predictor():
                 print(self.phon_helper.get_xsampa_to_arpa(phoneme_list[actual_index][0]), end='\t')
                 
                 preds = phoneme_list[most_common_indexes]
+                # valid_preds = preds
                 #print(preds)
                 valid_preds = preds[soft_max_values > MIN_PROB]
                 soft_max_values = soft_max_values[soft_max_values > MIN_PROB]
 
-                if not started_talking and valid_preds[0] != '*':
+                if not started_talking and (valid_preds[0] != '*' or len(soft_max_values > 1)):
                     started_talking = True
 
                 if started_talking and '*' in valid_preds:
@@ -112,7 +113,7 @@ class Predictor():
 # model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-10-11-55'
 #model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-12-46-03'
 #model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-13-41-32' #4 epoch
-model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-03-09-11-36-15'
+model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-03-11-10-01-34'
 test_set_path = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\datasets\\predict"
 
 predictor = Predictor(test_set_path, model_file_name)

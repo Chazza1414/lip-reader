@@ -14,7 +14,7 @@ XSAMPA_ARPA_CONVERSION = {
     'aU': 'AW', 
     'aI': 'AY', 
     's': 'S', 
-    'w': 'S', 
+    'w': 'W', 
     'V': 'AH', #
     'g': 'G', 
     'e': 'EH', 
@@ -62,28 +62,28 @@ class PhonemeLibrary:
         else:
             return None
     
-    def convert_timit_array_to_cmu(self, timit_phonemes):
-        cmu_phonemes = []
-        for phoneme in timit_phonemes:
-            if phoneme == 'h#':
-                cmu_phonemes.append('h#')
-            elif phoneme in TIMIT_CMU_PHONEME_PAIRS:
-                cmu_phonemes.append(TIMIT_CMU_PHONEME_PAIRS[phoneme])
-            else:
-                print("phoneme missing from dict")
+    # def convert_timit_array_to_cmu(self, timit_phonemes):
+    #     cmu_phonemes = []
+    #     for phoneme in timit_phonemes:
+    #         if phoneme == 'h#':
+    #             cmu_phonemes.append('h#')
+    #         elif phoneme in TIMIT_CMU_PHONEME_PAIRS:
+    #             cmu_phonemes.append(TIMIT_CMU_PHONEME_PAIRS[phoneme])
+    #         else:
+    #             print("phoneme missing from dict")
 
-    def convert_timit_phoneme_to_cmu(self, timit_phoneme):
-        if timit_phoneme == 'h#':
-                return 'h#'
-        elif timit_phoneme in TIMIT_CMU_PHONEME_PAIRS:
-            return TIMIT_CMU_PHONEME_PAIRS[timit_phoneme]
-        elif timit_phoneme == 'epi':
-            return 'epi'
-        elif timit_phoneme == 'pau':
-            return 'pau'
-        else:
-            print("phoneme missing from dict")
-            raise KeyError()
+    # def convert_timit_phoneme_to_cmu(self, timit_phoneme):
+    #     if timit_phoneme == 'h#':
+    #             return 'h#'
+    #     elif timit_phoneme in TIMIT_CMU_PHONEME_PAIRS:
+    #         return TIMIT_CMU_PHONEME_PAIRS[timit_phoneme]
+    #     elif timit_phoneme == 'epi':
+    #         return 'epi'
+    #     elif timit_phoneme == 'pau':
+    #         return 'pau'
+    #     else:
+    #         print("phoneme missing from dict")
+    #         raise KeyError()
 
     def create_transcription_array(self, transcription_file_path, frame_rate):
         start_end_word = []

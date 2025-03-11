@@ -360,21 +360,22 @@ class VisualisePhonemes:
         ax.set_xticks(self.time_labels)
         ax.set_xticklabels(self.word_labels)
 
-        inflection_length = len(self.inflection_indexes)
-        avg_db_length = len(self.average_decibels)
+        # FILL BLUE REGION
+        # inflection_length = len(self.inflection_indexes)
+        # avg_db_length = len(self.average_decibels)
 
-        for i in range(1, inflection_length):
-            start_fraction = int(((i-1)/inflection_length)*avg_db_length)
-            end_fraction = int(((i)/inflection_length)*avg_db_length)
-            #print(np.mean(self.average_decibels[start_fraction:end_fraction]), self.silent_average)
-            if (np.mean(self.average_decibels[start_fraction:end_fraction]) > self.silent_average):
-                ax.fill([
-                self.inflection_indexes[i-1], 
-                self.inflection_indexes[i], 
-                self.inflection_indexes[i], 
-                self.inflection_indexes[i-1]], 
-                [0, 0, self.sample_rate/2, self.sample_rate/2], 
-                color='blue', alpha=0.2, zorder=8)
+        # for i in range(1, inflection_length):
+        #     start_fraction = int(((i-1)/inflection_length)*avg_db_length)
+        #     end_fraction = int(((i)/inflection_length)*avg_db_length)
+        #     #print(np.mean(self.average_decibels[start_fraction:end_fraction]), self.silent_average)
+        #     if (np.mean(self.average_decibels[start_fraction:end_fraction]) > self.silent_average):
+        #         ax.fill([
+        #         self.inflection_indexes[i-1], 
+        #         self.inflection_indexes[i], 
+        #         self.inflection_indexes[i], 
+        #         self.inflection_indexes[i-1]], 
+        #         [0, 0, self.sample_rate/2, self.sample_rate/2], 
+        #         color='blue', alpha=0.2, zorder=8)
 
         #ax.scatter(cent_times, centroids, zorder=5, color='red')
 
@@ -581,9 +582,9 @@ class VisualisePhonemes:
         self.word_labels = [pair[2] for pair in self.transcription_array]
 
 #FILE_NAME = 'swwp2s_high.wav'
-FILE_NAME = '../GRID/s23_50kHz/s23/bbad1s.wav'
+FILE_NAME = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\audio\\s23_50kHz\\s23\\bbad1s.wav"
 #TRANS_FILE_NAME = 'swwp2s.align.txt'
-TRANS_FILE_NAME = '../GRID/s23/align/bbad1s.align'
+TRANS_FILE_NAME = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\transcription\\s23\\align\\bbad1s.align"
 FRAME_RATE = 25
 nfft = 128
 noverlap = nfft // 2

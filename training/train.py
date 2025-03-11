@@ -1,7 +1,7 @@
 from keras.optimizers import Adam
 from keras.losses import CategoricalCrossentropy
 from keras.callbacks import TensorBoard
-from keras.metrics import CategoricalAccuracy
+from keras.metrics import CategoricalAccuracy, Recall, Precision
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -24,8 +24,10 @@ def train(run_name, stop_epoch, img_c, img_w, img_h, frames_n, minibatch_size, d
     adam = Adam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
     loss = CategoricalCrossentropy(reduction="sum_over_batch_size", name="CCE")
     accuracy = CategoricalAccuracy(name="categorical_accuracy")
+    recall = Recall(name='recall')
+    precision = Precision(name='precision')
 
-    lipreader.model.compile(optimizer=adam, loss=loss, metrics=[accuracy])
+    lipreader.model.compile(optimizer=adam, loss=loss, metrics=[accuracy, recall, precision])
 
     tensorboard = TensorBoard(log_dir=os.path.join(MODEL_LOG_LOCATION, run_name), histogram_freq=1, write_images=True, embeddings_freq=1, 
                               update_freq=10)
@@ -54,4 +56,4 @@ def train(run_name, stop_epoch, img_c, img_w, img_h, frames_n, minibatch_size, d
 if __name__ == '__main__':
     run_name = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     #train(run_name, 1, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 1, dataset_path="H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_datasets")
-    train(run_name, 4, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 16, dataset_path=DATASET_PATH)
+    train(run_name, 8, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 16, dataset_path=DATASET_PATH)
