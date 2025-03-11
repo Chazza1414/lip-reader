@@ -18,14 +18,14 @@ from lipreader.common.constants import MODEL_SAVE_LOCATION, NUM_PHONEMES, VIDEO_
 from pathlib import Path
 
 class Predictor():
-    def __init__(self, test_set_path, model_file_name):
+    def __init__(self, test_set_path, model_file_name, dataset_path=DATASET_PATH):
         self.test_set_path = test_set_path
         self.model_file_name = model_file_name
         self.img_c = IMAGE_CHANNELS
         self.img_w = IMAGE_WIDTH
         self.img_h = IMAGE_HEIGHT
         self.frames_n = VIDEO_FRAME_NUM
-        self.dataset_path = DATASET_PATH
+        self.dataset_path = dataset_path
         self.align_path = Path(self.dataset_path) / 'phoneme-alignment'
         self.phon_helper = PhonemeLibrary()
     
