@@ -16,6 +16,7 @@ import tensorflow as tf
 import numpy as np
 from lipreader.common.constants import MODEL_SAVE_LOCATION, NUM_PHONEMES, VIDEO_FRAME_NUM, IMAGE_CHANNELS, IMAGE_HEIGHT, IMAGE_WIDTH, PHONEME_LIST, DATASET_PATH
 from pathlib import Path
+import csv
 
 class Predictor():
     def __init__(self, test_set_path, model_file_name, dataset_path=DATASET_PATH):
@@ -58,6 +59,9 @@ class Predictor():
         started_talking = False
         MIN_PROB = 0.1
 
+        pred_csv = []
+
+
         for j in range(len(predictions)):
             for i in range(len(predictions[j])):
                 out = np.array([])
@@ -78,14 +82,17 @@ class Predictor():
                 if not started_talking and (valid_preds[0] != '*' or len(soft_max_values > 1)):
                     started_talking = True
 
-                if started_talking and '*' in valid_preds:
-                    index = np.where(valid_preds == '*')[0]
-                    valid_preds = np.delete(valid_preds, index)
-                    soft_max_values = np.delete(soft_max_values, index)
+                # if started_talking and '*' in valid_preds:
+                #     index = np.where(valid_preds == '*')[0]
+                #     valid_preds = np.delete(valid_preds, index)
+                #     soft_max_values = np.delete(soft_max_values, index)
 
-
+                valid_csv = []
                 for k in range(len(valid_preds)):
                     print(str(self.phon_helper.get_xsampa_to_arpa(valid_preds[k])) + " " + str(soft_max_values[k]), end='\t')
+                    valid_csv.append([str(self.phon_helper.get_xsampa_to_arpa(valid_preds[k])), str(soft_max_values[k])])
+                
+                pred_csv.append([self.phon_helper.get_xsampa_to_arpa(phoneme_list[actual_index][0])] + valid_csv)
                 
                 print("\n")
 
@@ -102,6 +109,11 @@ class Predictor():
                 #       str(arpa_phonemes[3]) + "\t" + str(soft_max_values[2]))
             #phonemes = np.append(phonemes, (phoneme_list[np.argsort(pred)[-3:][::-1]]))
 
+        with open('prediction.csv', mode='w', newline='') as file:
+            writer = csv.writer(file)
+
+            writer.writerows(pred_csv)
+
         
         #print(most_likely_phonemes)
         #print(phoneme_list[most_likely_phonemes])
@@ -113,7 +125,7 @@ class Predictor():
 # model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-10-11-55'
 #model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-12-46-03'
 #model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-13-41-32' #4 epoch
-model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-03-11-10-01-34'
+model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-03-12-10-09-28'
 test_set_path = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\datasets\\predict"
 
 predictor = Predictor(test_set_path, model_file_name)

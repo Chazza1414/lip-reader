@@ -12,7 +12,8 @@ from sklearn.mixture import GaussianMixture
 from collections import Counter
 from scipy.signal import resample
 
-TRANS_FILE_NAME = '../GRID/s23/align/bbad1s.align'
+#TRANS_FILE_NAME = '../GRID/s23/align/bbad1s.align'
+TRANS_FILE_NAME = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\transcription\\s23\\align\\bbad1s.align"
 PhonLib = PhonemeLibrary()
 transcription_array = PhonLib.create_transcription_array(TRANS_FILE_NAME, 25)
 
@@ -86,14 +87,15 @@ def freq_mag_kmeans(audio_file):
     N = len(data)
 
     sample_size = 8
-    step_size = 0.005
+    #step_size = 0.005
+    step_size = 0.00005
 
     all_peaks = []
 
     time2 = []
     #print(N, sample_size, sample_rate)
     #print(N/(sample_size*sample_rate))
-    samples = int(N/(step_size*sample_rate))
+    samples = 100*int(N/(step_size*sample_rate))
     n_samples = 5
 
     frequencies = []
@@ -106,7 +108,7 @@ def freq_mag_kmeans(audio_file):
         curr_N = len(current_sample)
         freq_data = fft(current_sample)
         freq_magnitude = np.abs(freq_data)[:curr_N // 2]  # Take the positive frequencies
-        freqs = np.fft.fftfreq(curr_N, d=1/sample_rate)[:curr_N // 2]
+        freqs = np.fft.fftfreq(curr_N, d=1/100*sample_rate)[:curr_N // 2]
 
         peaks, _ = find_peaks(freq_magnitude, height=0.1 * max(freq_magnitude))
 
@@ -154,7 +156,7 @@ def freq_mag_kmeans(audio_file):
     labels = kmeans.labels_
     centroids = kmeans.cluster_centers_
 
-    plt.scatter(frequencies, magnitudes, c=labels, cmap='viridis', marker='o', edgecolor='k')
+    plt.scatter(frequencies, magnitudes, c=labels, cmap='viridis', marker='_', edgecolor='k')
     plt.vlines(centroids, ymin=min(magnitudes), ymax=max(magnitudes), colors='red', linestyles='dashed', label='Cluster Centers')
     #plt.scatter(centroids[:, 0], centroids[:, 1], c='red', marker='X', s=200, label='Centroids')
     plt.xlabel('Frequency')
@@ -165,6 +167,7 @@ def freq_mag_kmeans(audio_file):
 
 def dominant_frequencies(audio_file):
     sample_rate, data = wav.read(audio_file)
+    #print(sample_rate)
 
     if len(data.shape) > 1:
         data = data[:, 0]
@@ -274,13 +277,13 @@ def dominant_frequencies(audio_file):
     plt.close()
 
     #distances = gaussian_filter1d(distances, sigma=1)
-    freq_sum = gaussian_filter1d(freq_sum, sigma=1)
+    # freq_sum = gaussian_filter1d(freq_sum, sigma=1)
 
-    #plt.plot(d_times, distances)
-    plt.plot(d_times, freq_sum)
-    plt.vlines([pair[0] for pair in transcription_array], 
-        colors='black', ymin=0, ymax=max(freq_sum))
-    plt.show()
+    # #plt.plot(d_times, distances)
+    # plt.plot(d_times, freq_sum)
+    # plt.vlines([pair[0] for pair in transcription_array], 
+    #     colors='black', ymin=0, ymax=max(freq_sum))
+    # plt.show()
 
 # Example usage
 # plot_fourier_transform("your_audio_file.wav")
@@ -289,7 +292,8 @@ def dominant_frequencies(audio_file):
 #plot_fourier_transform('../GRID/s23_50kHz/s23/bbad1s.wav', 0.59, 0.65)
 #plot_fourier_transform('../GRID/s23_50kHz/s23/bbad1s.wav', 0.59, 0.6)
 #plot_fourier_transform('../GRID/s23_50kHz/s23/bbad1s.wav', 0.5725, 0.5850)
+file_path = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\audio\\s23_50kHz\\s23\\bbad1s.wav"
 
-dominant_frequencies('../GRID/s23_50kHz/s23/bbad1s.wav')
+dominant_frequencies(file_path)
 
 #freq_mag_kmeans('../GRID/s23_50kHz/s23/bbad1s.wav')
