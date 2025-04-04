@@ -40,9 +40,9 @@ class VisualisePhonemes:
         # create xtick words and labels
         self.create_xticks()
 
-        self.display_inflection_phonemes(2048, 128)
+        #self.display_inflection_phonemes(2048, 128)
 
-        #self.display_timit_phonemes()
+        self.display_timit_phonemes()
 
         
     
@@ -406,8 +406,8 @@ class VisualisePhonemes:
         # create spectrogram
         frequencies, times, Sxx = self.create_spectrogram()
 
-        #log_Sxx_thresholded = 10 * np.log10(Sxx)
-        log_Sxx_thresholded = Sxx
+        log_Sxx_thresholded = 10 * np.log10(Sxx)
+        #log_Sxx_thresholded = Sxx
 
         #print(log_Sxx_thresholded)
         #log_Sxx_thresholded = self.threshold_and_log_spectrogram(Sxx)

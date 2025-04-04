@@ -56,4 +56,4 @@ def train(run_name, stop_epoch, img_c, img_w, img_h, frames_n, minibatch_size, d
 if __name__ == '__main__':
     run_name = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     #train(run_name, 1, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 1, dataset_path="H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_datasets")
-    train(run_name, 8, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 16, dataset_path=DATASET_PATH)
+    train(run_name, 32, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 16, dataset_path=DATASET_PATH)
