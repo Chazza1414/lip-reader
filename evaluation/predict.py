@@ -38,7 +38,7 @@ class Predictor():
         #X_data_path = self.enumerate_videos(self.test_set_path)
         X_data = []
         Y_data = []
-        
+        #print(X_data_path)
         for path in X_data_path:
             print(path)
             video = Video().from_path(path)
@@ -113,8 +113,10 @@ class Predictor():
 # model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-10-11-55'
 #model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-12-46-03'
 #model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-02-24-13-41-32' #4 epoch
-model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-03-11-10-01-34'
-test_set_path = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\datasets\\predict"
+#model_file_name = Path(MODEL_SAVE_LOCATION) / '2025-03-11-10-01-34'
+model_file_name = "evaluation/models/2025-03-11-10-01-34"
+test_set_path = "evaluation/test_input"
+laptop_test_dataset_path = "evaluation/test_input"
 
-predictor = Predictor(test_set_path, model_file_name)
+predictor = Predictor(test_set_path, model_file_name, laptop_test_dataset_path)
 predictor.predict()

@@ -332,6 +332,7 @@ class VisualisePhonemes:
         # create centroids
         centroids = self.compute_spectral_centroids(n_fft, hop_length)
         smoothed_centroids = self.smooth_centroids(centroids)
+        cent_times = np.arange(start=0, stop=3, step=3/len(smoothed_centroids))
         filtered_centroids = self.remove_silent_centroids(smoothed_centroids)
         
         # calculate the local minima and maxima of the centroids
@@ -377,7 +378,7 @@ class VisualisePhonemes:
         #         [0, 0, self.sample_rate/2, self.sample_rate/2], 
         #         color='blue', alpha=0.2, zorder=8)
 
-        #ax.scatter(cent_times, centroids, zorder=5, color='red')
+        ax.scatter(cent_times, smoothed_centroids, zorder=5, color='red')
 
         ax.vlines(self.inflection_indexes, colors='orange', ymin=0, ymax=self.sample_rate/2)
 
@@ -581,10 +582,10 @@ class VisualisePhonemes:
         self.time_labels = [pair[0] for pair in self.transcription_array]
         self.word_labels = [pair[2] for pair in self.transcription_array]
 
-#FILE_NAME = 'swwp2s_high.wav'
-FILE_NAME = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\audio\\s23_50kHz\\s23\\bbad1s.wav"
-#TRANS_FILE_NAME = 'swwp2s.align.txt'
-TRANS_FILE_NAME = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\transcription\\s23\\align\\bbad1s.align"
+FILE_NAME = 'swwp2s_high.wav'
+#FILE_NAME = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\audio\\s23_50kHz\\s23\\bbad1s.wav"
+TRANS_FILE_NAME = 'swwp2s.align.txt'
+#TRANS_FILE_NAME = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\transcription\\s23\\align\\bbad1s.align"
 FRAME_RATE = 25
 nfft = 128
 noverlap = nfft // 2

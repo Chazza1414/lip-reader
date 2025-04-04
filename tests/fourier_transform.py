@@ -12,7 +12,7 @@ from sklearn.mixture import GaussianMixture
 from collections import Counter
 from scipy.signal import resample
 
-TRANS_FILE_NAME = '../GRID/s23/align/bbad1s.align'
+TRANS_FILE_NAME = 'swwp2s.align.txt'
 PhonLib = PhonemeLibrary()
 transcription_array = PhonLib.create_transcription_array(TRANS_FILE_NAME, 25)
 
@@ -290,6 +290,6 @@ def dominant_frequencies(audio_file):
 #plot_fourier_transform('../GRID/s23_50kHz/s23/bbad1s.wav', 0.59, 0.6)
 #plot_fourier_transform('../GRID/s23_50kHz/s23/bbad1s.wav', 0.5725, 0.5850)
 
-dominant_frequencies('../GRID/s23_50kHz/s23/bbad1s.wav')
+dominant_frequencies('swwp2s_high.wav')
 
 #freq_mag_kmeans('../GRID/s23_50kHz/s23/bbad1s.wav')

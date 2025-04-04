@@ -345,6 +345,6 @@ timit_to_cmu()
 #print(word_dict)
 #print(num_completed, num_failed)
 
-with open("timit_phonemes_2.json", "w") as file:
-    json.dump(word_dict, file, indent=4)
+# with open("timit_phonemes_2.json", "w") as file:
+#     json.dump(word_dict, file, indent=4)
 

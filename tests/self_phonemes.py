@@ -6,7 +6,7 @@ from scipy.fft import fft
 from scipy.fftpack import ifft
 from scipy.signal import spectrogram, argrelextrema
 from scipy.ndimage import label, gaussian_filter1d
-import noisereduce as nr
+#import noisereduce as nr
 from phoneme_library import PhonemeLibrary
 
 FILE_NAME = 'swwp2s_high.wav'

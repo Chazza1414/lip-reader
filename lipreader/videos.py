@@ -1,7 +1,7 @@
 import cv2 as cv
 import imageio.v3 as iio
 import numpy as np
-import dlib
+
 import keras.backend as K
 from lipreader.common.constants import IMAGE_HEIGHT, IMAGE_WIDTH, VIDEO_FRAME_NUM, IMAGE_CHANNELS
 from pathlib import Path
