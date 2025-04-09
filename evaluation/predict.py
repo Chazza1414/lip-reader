@@ -1,6 +1,6 @@
 from keras import models
 import sys, os, csv, argparse
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from lipreader.align import Align
 from lipreader.videos import Video, VideoHelper
 from lipreader.common.phoneme_helper import PhonemeLibrary

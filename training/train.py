@@ -2,7 +2,7 @@ from keras.optimizers import Adam
 from keras.losses import CategoricalCrossentropy
 from keras.callbacks import TensorBoard
 from keras.metrics import CategoricalAccuracy, Recall, Precision
-import sys
+import sys, argparse
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from lipreader.generator import Generator, LockedIterator
@@ -55,5 +55,15 @@ def train(run_name, stop_epoch, img_c, img_w, img_h, frames_n, minibatch_size, d
 
 if __name__ == '__main__':
     run_name = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    #train(run_name, 1, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 1, dataset_path="H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\test_datasets")
-    train(run_name, 32, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, 16, dataset_path=DATASET_PATH)
+
+    parser = argparse.ArgumentParser(
+        prog='Predict',
+        description='Predicts frame phonemes using a pre-trained model'
+    )
+
+    parser.add_argument('epochs', help='number of epochs to run')
+    parser.add_argument('--minibatch', help='minibatch size (small for low GPU memory)', default=8)
+
+    args = parser.parse_args()
+
+    train(run_name, args.epochs, IMAGE_CHANNELS, IMAGE_WIDTH, IMAGE_HEIGHT, VIDEO_FRAME_NUM, args.minibatch, dataset_path=DATASET_PATH)

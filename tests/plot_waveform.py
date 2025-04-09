@@ -8,13 +8,15 @@ from phoneme_library import PhonemeLibrary
 #import sounddevice as sd
 
 # Load the audio file
-file_path = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\audio\\s23_50kHz\\s23\\bbad1s.wav"  # Replace with your audio file path
+#file_path = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\audio\\s23_50kHz\\s23\\bbad1s.wav"  # Replace with your audio file path
+file_path = 'swwp2s_high.wav'  # Replace with your audio file path
 y, sr = librosa.load(file_path)
 
 y = gaussian_filter1d(y, sigma=4)
 times = np.linspace(start=0, stop=3, num=len(y))
 
-TRANS_FILE_NAME = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\transcription\\s23\\align\\bbad1s.align"
+#TRANS_FILE_NAME = "H:\\UNI\\CS\\Year3\\Project\\Dataset\\GRID\\transcription\\s23\\align\\bbad1s.align"
+TRANS_FILE_NAME = 'swwp2s.align.txt'
 PhonLib = PhonemeLibrary()
 transcription_array = PhonLib.create_transcription_array(TRANS_FILE_NAME, 25)
 
@@ -48,8 +50,8 @@ y_min_times = np.linspace(start=0, stop=3, num=len(y_min))
 fig, ax = plt.subplots(1, 1)
 #librosa.display.waveshow(y, sr=sr, alpha=0.8)
 
-ax.vlines([pair[0] for pair in transcription_array], 
-colors='black', ymin=-1, ymax=1)
+# ax.vlines([pair[0] for pair in transcription_array], 
+# colors='black', ymin=-1, ymax=1)
 ax.hlines([0], 0, 3, colors='black')
 ax.plot(times, y, marker=None, linestyle='-')
 ax.set_xlabel("Time (seconds)")
