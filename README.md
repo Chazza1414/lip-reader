@@ -6,7 +6,7 @@ A lipreading neural network trained on the GRID dataset to improve communication
 
 To run a pre-trained LipReader model:
 
-1. Clone the project
+1. Clone the project.
 2. Install the dependencies using the instructions [here](###dependencies)
 3. Prepare GPU using [CUDA](https://docs.nvidia.com/cuda/) and [cuDNN](https://docs.nvidia.com/cudnn/)  
 **Note:** To not use CUDA change the `tensorflow-gpu` requirement to be `tensorflow` in [requirements](requirements.txt)
